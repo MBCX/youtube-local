@@ -1,3 +1,6 @@
+import { SilentSegmentsDetector } from "./classes/SilentSegmentDetector.js";
+import { changeQuality, numberBetween } from "./common.js";
+
 var captionsActive;
 if(data.settings.subtitles_mode == 2)
     captionsActive = true;
@@ -21,8 +24,6 @@ else if (data['uni_sources'].length != 0)
 else
     qualityDefault = 'None';
 
-
-
 // Fix plyr refusing to work with qualities that are strings
 Object.defineProperty(Plyr.prototype, 'quality', {
     set: function(input) {
@@ -36,7 +37,7 @@ Object.defineProperty(Plyr.prototype, 'quality', {
       // removing this line:
       //let quality = [!is.empty(input) && Number(input), this.storage.get('quality'), config.selected, config.default].find(is.number);
       // replacing with:
-      quality = input;
+      let quality = input;
       let updateStorage = true;
 
       if (!options.includes(quality)) {
@@ -65,7 +66,26 @@ Object.defineProperty(Plyr.prototype, 'quality', {
     }
 });
 
-const player = new Plyr(document.querySelector('video'), {
+function skipSilence(videoObj)
+{
+    const detector = new SilentSegmentsDetector(videoObj, 0.020);
+    detector.onSilence = (segment) => {
+        console.log(`Silent segment detected from ${segment[0]} to ${segment[1]}`);
+        if (
+            numberBetween(
+                videoObj.currentTime,
+                segment[0],
+                segment[1] - 1,
+                true
+            )
+        )
+        {
+            videoObj.currentTime = segment[1];
+        }
+    }
+}
+
+const player = new Plyr(document.querySelector("video"), {
     disableContextMenu: false,
     captions: {
         active: captionsActive,
@@ -134,5 +154,9 @@ player.eventListeners.forEach(function(eventListener) {
 // Add .started property, true after the playback has been started
 // Needed so controls won't be hidden before playback has started
 player.started = false;
-player.once('playing', function(){this.started = true});
+player.once('playing', function() {
+    this.started = true;
+    // skipSilence(player.media)
+});
 
+export { player };

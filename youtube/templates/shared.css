@@ -195,6 +195,7 @@ body{
     /* prevent overflow due to long titles with no spaces:
     https://stackoverflow.com/a/43312314 */
     min-width: 0;
+    gap: 1rem;
 }
 .vertical-item-box{
 }

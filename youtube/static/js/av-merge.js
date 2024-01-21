@@ -2,26 +2,18 @@
 // https://github.com/nickdesaulniers/netfix/issues/4#issuecomment-578856471
 // which was in turn modified from
 // https://github.com/nickdesaulniers/netfix/blob/gh-pages/demo/bufferWhenNeeded.html
-
 // Useful reading:
 // https://stackoverflow.com/questions/35177797/what-exactly-is-fragmented-mp4fmp4-how-is-it-different-from-normal-mp4
 // https://axel.isouard.fr/blog/2016/05/24/streaming-webm-video-over-html5-with-media-source
-
 // We start by parsing the sidx (segment index) table in order to get the
 // byte ranges of the segments. The byte range of the sidx table is provided
 // by the indexRange variable by YouTube
-
 // Useful info, as well as segments vs sequence mode (we use segments mode)
 // https://joshuatz.com/posts/2020/appending-videos-in-javascript-with-mediasource-buffers/
-
 // SourceBuffer data limits:
 // https://developers.google.com/web/updates/2017/10/quotaexceedederror
-
 // TODO: Call abort to cancel in-progress appends?
-
-
-
-function AVMerge(video, srcInfo, startTime){
+function AVMerge(video, srcInfo, startTime) {
     this.audioSource = null;
     this.videoSource = null;
     this.avRatio = null;
@@ -38,48 +30,40 @@ function AVMerge(video, srcInfo, startTime){
     if (!('MediaSource' in window)) {
         reportError('MediaSource not supported.');
         return;
-    }
+    }    // Find supported video and audio sources
 
-    // Find supported video and audio sources
     for (var src of srcInfo['videos']) {
         if (MediaSource.isTypeSupported(src['mime_codec'])) {
-            reportDebug('Using video source', src['mime_codec'],
-                        src['quality_string'], 'itag', src['itag']);
+            reportDebug('Using video source', src['mime_codec'], src['quality_string'], 'itag', src['itag']);
             this.videoSource = src;
             break;
         }
     }
     for (var src of srcInfo['audios']) {
         if (MediaSource.isTypeSupported(src['mime_codec'])) {
-            reportDebug('Using audio source', src['mime_codec'],
-                        src['quality_string'], 'itag', src['itag']);
+            reportDebug('Using audio source', src['mime_codec'], src['quality_string'], 'itag', src['itag']);
             this.audioSource = src;
             break;
         }
     }
     if (this.videoSource === null)
-        reportError('No supported video MIME type or codec found: ',
-                    srcInfo['videos'].map(s => s.mime_codec).join(', '));
+        reportError('No supported video MIME type or codec found: ', srcInfo['videos'].map(s => s.mime_codec).join(', '));
     if (this.audioSource === null)
-        reportError('No supported audio MIME type or codec found: ',
-                    srcInfo['audios'].map(s => s.mime_codec).join(', '));
+        reportError('No supported audio MIME type or codec found: ', srcInfo['audios'].map(s => s.mime_codec).join(', '));
     if (this.videoSource === null || this.audioSource === null)
         return;
-
     if (this.videoSource.bitrate && this.audioSource.bitrate)
-        this.avRatio = this.audioSource.bitrate/this.videoSource.bitrate;
+        this.avRatio = this.audioSource.bitrate / this.videoSource.bitrate;
     else
-        this.avRatio = 1/10;
-
+        this.avRatio = 1 / 10;
     this.setup();
 }
-AVMerge.prototype.setup = function() {
+AVMerge.prototype.setup = function () {
     this.mediaSource = new MediaSource();
     this.video.src = URL.createObjectURL(this.mediaSource);
     this.mediaSource.onsourceopen = this.sourceOpen.bind(this);
 }
-
-AVMerge.prototype.sourceOpen = function(_) {
+AVMerge.prototype.sourceOpen = function (_) {
     // If after calling mediaSource.endOfStream, the user seeks back
     // into the video, the sourceOpen event will be fired again. Do not
     // overwrite the streams.
@@ -88,21 +72,15 @@ AVMerge.prototype.sourceOpen = function(_) {
     if (this.opened)
         return;
     this.opened = true;
-    this.videoStream = new Stream(this, this.videoSource, this.startTime,
-                                  this.avRatio);
-    this.audioStream = new Stream(this, this.audioSource, this.startTime,
-                                  this.avRatio);
-
+    this.videoStream = new Stream(this, this.videoSource, this.startTime, this.avRatio);
+    this.audioStream = new Stream(this, this.audioSource, this.startTime, this.avRatio);
     this.videoStream.setup();
     this.audioStream.setup();
-
-    this.timeUpdateEvt = addEvent(this.video, 'timeupdate',
-                                  this.checkBothBuffers.bind(this));
-    this.seekingEvt = addEvent(this.video, 'seeking',
-                               debounce(this.seek.bind(this), 500));
+    this.timeUpdateEvt = addEvent(this.video, 'timeupdate', this.checkBothBuffers.bind(this));
+    this.seekingEvt = addEvent(this.video, 'seeking', debounce(this.seek.bind(this), 500));
     //this.video.onseeked = function() {console.log('seeked')};
 }
-AVMerge.prototype.close = function() {
+AVMerge.prototype.close = function () {
     if (this.closed)
         return;
     this.closed = true;
@@ -113,36 +91,35 @@ AVMerge.prototype.close = function() {
     if (this.mediaSource.readyState == 'open')
         this.mediaSource.endOfStream();
 }
-AVMerge.prototype.checkBothBuffers = function() {
+AVMerge.prototype.checkBothBuffers = function () {
     this.audioStream.checkBuffer();
     this.videoStream.checkBuffer();
 }
-AVMerge.prototype.seek = function(e) {
+AVMerge.prototype.seek = function (e) {
     if (this.mediaSource.readyState === 'open') {
         this.seeking = true;
         this.audioStream.handleSeek();
         this.videoStream.handleSeek();
         this.seeking = false;
     } else {
-        reportWarning('seek but not open? readyState:',
-                      this.mediaSource.readyState);
+        reportWarning('seek but not open? readyState:', this.mediaSource.readyState);
     }
 }
-AVMerge.prototype.audioEndOfStream = function() {
+AVMerge.prototype.audioEndOfStream = function () {
     if (this.videoEndOfStreamCalled && !this.audioEndOfStreamCalled) {
         reportDebug('Calling mediaSource.endOfStream()');
         this.mediaSource.endOfStream();
     }
     this.audioEndOfStreamCalled = true;
 }
-AVMerge.prototype.videoEndOfStream = function() {
+AVMerge.prototype.videoEndOfStream = function () {
     if (this.audioEndOfStreamCalled && !this.videoEndOfStreamCalled) {
         reportDebug('Calling mediaSource.endOfStream()');
         this.mediaSource.endOfStream();
     }
     this.videoEndOfStreamCalled = true;
 }
-AVMerge.prototype.printDebuggingInfo = function() {
+AVMerge.prototype.printDebuggingInfo = function () {
     reportDebug('videoSource:', this.videoSource);
     reportDebug('audioSource:', this.videoSource);
     reportDebug('video sidx:', this.videoStream.sidx);
@@ -154,15 +131,15 @@ AVMerge.prototype.printDebuggingInfo = function() {
     reportDebug('mediaSource.readyState:', this.mediaSource.readyState);
     reportDebug('videoEndOfStreamCalled', this.videoEndOfStreamCalled);
     reportDebug('audioEndOfStreamCalled', this.audioEndOfStreamCalled);
-    for (let obj of [this.videoStream, this.audioStream]) {
+    for (let obj of [this.videoStream,
+    this.audioStream]) {
         reportDebug(obj.streamType, 'stream buffered times:');
-        for (let i=0; i<obj.sourceBuffer.buffered.length; i++) {
+        for (let i = 0; i < obj.sourceBuffer.buffered.length; i++) {
             reportDebug(String(obj.sourceBuffer.buffered.start(i)) + '-'
-                        + String(obj.sourceBuffer.buffered.end(i)));
+                + String(obj.sourceBuffer.buffered.end(i)));
         }
     }
 }
-
 function Stream(avMerge, source, startTime, avRatio) {
     this.avMerge = avMerge;
     this.video = avMerge.video;
@@ -173,19 +150,18 @@ function Stream(avMerge, source, startTime, avRatio) {
     this.mimeCodec = source['mime_codec']
     this.streamType = source['acodec'] ? 'audio' : 'video';
     if (this.streamType == 'audio') {
-        this.bufferTarget = avRatio*50*10**6;
+        this.bufferTarget = avRatio * 50 * 10 ** 6;
     } else {
-        this.bufferTarget = 50*10**6; // 50 megabytes
+        this.bufferTarget = 50 * 10 ** 6; // 50 megabytes
     }
-
     this.initRange = source['init_range'];
     this.indexRange = source['index_range'];
-
     this.startTime = startTime;
     this.mediaSource = avMerge.mediaSource;
     this.sidx = null;
     this.appendRetries = 0;
-    this.appendQueue = []; // list of [segmentIdx, data]
+    this.appendQueue = [
+    ]; // list of [segmentIdx, data]
     this.sourceBuffer = this.mediaSource.addSourceBuffer(this.mimeCodec);
     this.sourceBuffer.mode = 'segments';
     this.sourceBuffer.addEventListener('error', (e) => {
@@ -197,44 +173,31 @@ function Stream(avMerge, source, startTime, avRatio) {
         }
     });
 }
-Stream.prototype.setup = async function(){
+Stream.prototype.setup = async function () {
     // Group requests together
-    if (this.initRange.end+1 == this.indexRange.start){
-        fetchRange(
-            this.url,
-            this.initRange.start,
-            this.indexRange.end,
-            (buffer) => {
-                var init_end = this.initRange.end - this.initRange.start + 1;
-                var index_start = this.indexRange.start - this.initRange.start;
-                var index_end = this.indexRange.end - this.initRange.start + 1;
-                this.setupInitSegment(buffer.slice(0, init_end));
-                this.setupSegmentIndex(buffer.slice(index_start, index_end));
-            }
+    if (this.initRange.end + 1 == this.indexRange.start) {
+        fetchRange(this.url, this.initRange.start, this.indexRange.end, (buffer) => {
+            var init_end = this.initRange.end - this.initRange.start + 1;
+            var index_start = this.indexRange.start - this.initRange.start;
+            var index_end = this.indexRange.end - this.initRange.start + 1;
+            this.setupInitSegment(buffer.slice(0, init_end));
+            this.setupSegmentIndex(buffer.slice(index_start, index_end));
+        }
         )
     } else {
         // initialization data
-        await fetchRange(
-            this.url,
-            this.initRange.start,
-            this.initRange.end,
-            this.setupInitSegment.bind(this),
-        );
+        await fetchRange(this.url, this.initRange.start, this.initRange.end, this.setupInitSegment.bind(this),);
         // sidx (segment index) table
-        fetchRange(
-            this.url,
-            this.indexRange.start,
-            this.indexRange.end,
-            this.setupSegmentIndex.bind(this)
+        fetchRange(this.url, this.indexRange.start, this.indexRange.end, this.setupSegmentIndex.bind(this)
         );
     }
 }
-Stream.prototype.setupInitSegment = function(initSegment) {
+Stream.prototype.setupInitSegment = function (initSegment) {
     if (this.ext == 'webm')
         this.sidx = extractWebmInitializationInfo(initSegment);
     this.appendSegment(null, initSegment);
 }
-Stream.prototype.setupSegmentIndex = async function(indexSegment){
+Stream.prototype.setupSegmentIndex = async function (indexSegment) {
     if (this.ext == 'webm') {
         this.sidx.entries = parseWebmCues(indexSegment, this.sidx);
         if (this.fileSize) {
@@ -248,11 +211,11 @@ Stream.prototype.setupSegmentIndex = async function(indexSegment){
         }
     } else {
         var box = unbox(indexSegment);
-        this.sidx = sidx_parse(box.data, this.indexRange.end+1);
+        this.sidx = sidx_parse(box.data, this.indexRange.end + 1);
     }
     this.fetchSegmentIfNeeded(this.getSegmentIdx(this.startTime));
 }
-Stream.prototype.close = function() {
+Stream.prototype.close = function () {
     // Prevents appendSegment adding to buffer if request finishes
     // after closing
     this.closed = true;
@@ -261,17 +224,15 @@ Stream.prototype.close = function() {
     this.mediaSource.removeSourceBuffer(this.sourceBuffer);
     this.updateendEvt.remove();
 }
-Stream.prototype.appendSegment = function(segmentIdx, chunk) {
+Stream.prototype.appendSegment = function (segmentIdx, chunk) {
     if (this.closed)
         return;
-
-    this.reportDebug('Received segment', segmentIdx)
-
-    // cannot append right now, schedule for updateend
+    this.reportDebug('Received segment', segmentIdx)    // cannot append right now, schedule for updateend
     if (this.sourceBuffer.updating) {
         this.reportDebug('sourceBuffer updating, queueing for later');
-        this.appendQueue.push([segmentIdx, chunk]);
-        if (this.appendQueue.length > 2){
+        this.appendQueue.push([segmentIdx,
+            chunk]);
+        if (this.appendQueue.length > 2) {
             this.reportWarning('appendQueue length:', this.appendQueue.length);
         }
         return;
@@ -286,7 +247,6 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
             throw e;
         }
         this.reportWarning('QuotaExceededError.');
-
         // Count how many bytes are in buffer to update buffering target,
         // updating .have as well for when we need to delete segments
         var bytesInBuffer = 0;
@@ -298,19 +258,19 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
                 this.sidx.entries[i].requested = false;
             }
         }
-        bytesInBuffer = Math.floor(4/5*bytesInBuffer);
+        bytesInBuffer = Math.floor(4 / 5 * bytesInBuffer);
         if (bytesInBuffer < this.bufferTarget) {
             this.bufferTarget = bytesInBuffer;
             this.reportDebug('New buffer target:', this.bufferTarget);
-        }
-
-        // Delete 10 segments (arbitrary) from buffer, making sure
+        }        // Delete 10 segments (arbitrary) from buffer, making sure
         // not to delete current one
+
         var currentSegment = this.getSegmentIdx(this.video.currentTime);
         var numDeleted = 0;
         var i = 0;
         const DELETION_TARGET = 10;
-        var toDelete = []; // See below for why we have to schedule it
+        var toDelete = [
+        ]; // See below for why we have to schedule it
         this.reportDebug('Deleting segments from beginning of buffer.');
         while (numDeleted < DELETION_TARGET && i < currentSegment) {
             if (this.sidx.entries[i].have) {
@@ -321,7 +281,6 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
         }
         if (numDeleted < DELETION_TARGET)
             this.reportDebug('Deleting segments from end of buffer.');
-
         i = this.sidx.entries.length - 1;
         while (numDeleted < DELETION_TARGET && i > currentSegment) {
             if (this.sidx.entries[i].have) {
@@ -329,11 +288,10 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
                 numDeleted++;
             }
             i--;
-        }
-
-        // When calling .remove, the sourceBuffer will go into updating=true
+        }        // When calling .remove, the sourceBuffer will go into updating=true
         // state, and remove cannot be called until it is done. So we have
         // to delete on the updateend event for subsequent ones.
+
         var removeFinishedEvent;
         var deletedStuff = (toDelete.length !== 0)
         var deleteSegment = () => {
@@ -355,35 +313,32 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
             }
             let idx = toDelete.shift();
             let entry = this.sidx.entries[idx];
-            let start = entry.tickStart/this.sidx.timeScale;
-            let end = (entry.tickEnd+1)/this.sidx.timeScale;
+            let start = entry.tickStart / this.sidx.timeScale;
+            let end = (entry.tickEnd + 1) / this.sidx.timeScale;
             this.reportDebug('Deleting segment', idx);
             this.sourceBuffer.remove(start, end);
             entry.have = false;
             entry.requested = false;
         }
-        removeFinishedEvent = addEvent(this.sourceBuffer, 'updateend',
-                                       deleteSegment);
+        removeFinishedEvent = addEvent(this.sourceBuffer, 'updateend', deleteSegment);
         if (!this.sourceBuffer.updating)
             deleteSegment();
     }
 }
-Stream.prototype.getSegmentIdx = function(videoTime) {
+Stream.prototype.getSegmentIdx = function (videoTime) {
     // get an estimate
     var currentTick = videoTime * this.sidx.timeScale;
     var firstSegmentDuration = this.sidx.entries[0].subSegmentDuration;
     var index = 1 + Math.floor(currentTick / firstSegmentDuration);
     var index = clamp(index, 0, this.sidx.entries.length - 1);
-
     var increment = 1;
-    if (currentTick < this.sidx.entries[index].tickStart){
-        increment = -1;
-    }
+    if (currentTick < this.sidx.entries[index].tickStart) {
+        increment = - 1;
+    }    // go up or down to find correct index
 
-    // go up or down to find correct index
     while (index >= 0 && index < this.sidx.entries.length) {
         var entry = this.sidx.entries[index];
-        if (entry.tickStart <= currentTick && (entry.tickEnd+1) > currentTick){
+        if (entry.tickStart <= currentTick && (entry.tickEnd + 1) > currentTick) {
             return index;
         }
         index = index + increment;
@@ -391,11 +346,11 @@ Stream.prototype.getSegmentIdx = function(videoTime) {
     this.reportError('Could not find segment index for time', videoTime);
     return 0;
 }
-Stream.prototype.checkBuffer = async function() {
+Stream.prototype.checkBuffer = async function () {
     if (this.avMerge.seeking) {
         return;
-    }
-    // Find the first unbuffered segment, i
+    }    // Find the first unbuffered segment, i
+
     var currentSegmentIdx = this.getSegmentIdx(this.video.currentTime);
     var bufferedBytesAhead = 0;
     var i;
@@ -415,11 +370,10 @@ Stream.prototype.checkBuffer = async function() {
             return;
         }
     }
-
     if (i < this.sidx.entries.length && !this.sidx.entries[i].requested) {
         this.fetchSegment(i);
-    // We have all the segments until the end
-    // Signal the end of stream
+        // We have all the segments until the end
+        // Signal the end of stream
     } else if (i == this.sidx.entries.length) {
         if (this.streamType == 'audio')
             this.avMerge.audioEndOfStream();
@@ -427,11 +381,10 @@ Stream.prototype.checkBuffer = async function() {
             this.avMerge.videoEndOfStream();
     }
 }
-Stream.prototype.segmentInBuffer = function(segmentIdx) {
+Stream.prototype.segmentInBuffer = function (segmentIdx) {
     var entry = this.sidx.entries[segmentIdx];
     // allow for 0.01 second error
-    var timeStart = entry.tickStart/this.sidx.timeScale + 0.01;
-
+    var timeStart = entry.tickStart / this.sidx.timeScale + 0.01;
     /* Some of YouTube's mp4 fragments are malformed, with half-frame
     playback gaps. In this video at 240p (timeScale = 90000 ticks/second)
         https://www.youtube.com/watch?v=ZhOQCwJvwlo
@@ -458,37 +411,27 @@ Stream.prototype.segmentInBuffer = function(segmentIdx) {
     Either there is a bug in their encoder, or this is intentional. Allow for
     up to 1 frame-time of error to work around this issue. */
     if (this.streamType == 'video')
-        var endError = 1/(this.avMerge.videoSource.fps || 30);
+        var endError = 1 / (this.avMerge.videoSource.fps || 30);
     else
         var endError = 0.01
-    var timeEnd = (entry.tickEnd+1)/this.sidx.timeScale - endError;
-
+    var timeEnd = (entry.tickEnd + 1) / this.sidx.timeScale - endError;
     var timeRanges = this.sourceBuffer.buffered;
-    for (var i=0; i < timeRanges.length; i++) {
+    for (var i = 0; i < timeRanges.length; i++) {
         if (timeRanges.start(i) <= timeStart && timeEnd <= timeRanges.end(i)) {
             return true;
         }
     }
     return false;
 }
-Stream.prototype.fetchSegment = function(segmentIdx) {
+Stream.prototype.fetchSegment = function (segmentIdx) {
     entry = this.sidx.entries[segmentIdx];
     entry.requested = true;
-    this.reportDebug(
-        'Fetching segment', segmentIdx, ', bytes',
-        entry.start, entry.end, ', seconds',
-        entry.tickStart/this.sidx.timeScale,
-        (entry.tickEnd+1)/this.sidx.timeScale
+    this.reportDebug('Fetching segment', segmentIdx, ', bytes', entry.start, entry.end, ', seconds', entry.tickStart / this.sidx.timeScale, (entry.tickEnd + 1) / this.sidx.timeScale
     )
-    fetchRange(
-        this.url,
-        entry.start,
-        entry.end,
-        this.appendSegment.bind(this, segmentIdx),
-    );
+    fetchRange(this.url, entry.start, entry.end, this.appendSegment.bind(this, segmentIdx),);
 }
-Stream.prototype.fetchSegmentIfNeeded = function(segmentIdx) {
-    if (segmentIdx < 0 || segmentIdx >= this.sidx.entries.length){
+Stream.prototype.fetchSegmentIfNeeded = function (segmentIdx) {
+    if (segmentIdx < 0 || segmentIdx >= this.sidx.entries.length) {
         return;
     }
     entry = this.sidx.entries[segmentIdx];
@@ -501,25 +444,21 @@ Stream.prototype.fetchSegmentIfNeeded = function(segmentIdx) {
     if (entry.requested) {
         return;
     }
-
     this.fetchSegment(segmentIdx);
 }
-Stream.prototype.handleSeek = function() {
+Stream.prototype.handleSeek = function () {
     var segmentIdx = this.getSegmentIdx(this.video.currentTime);
     this.fetchSegmentIfNeeded(segmentIdx);
 }
-Stream.prototype.reportDebug = function(...args) {
+Stream.prototype.reportDebug = function (...args) {
     reportDebug(String(this.streamType) + ':', ...args);
 }
-Stream.prototype.reportWarning = function(...args) {
+Stream.prototype.reportWarning = function (...args) {
     reportWarning(String(this.streamType) + ':', ...args);
 }
-Stream.prototype.reportError = function(...args) {
+Stream.prototype.reportError = function (...args) {
     reportError(String(this.streamType) + ':', ...args);
-}
-
-
-// Utility functions
+}// Utility functions
 
 function fetchRange(url, start, end, cb) {
     return new Promise((resolve, reject) => {
@@ -527,20 +466,19 @@ function fetchRange(url, start, end, cb) {
         xhr.open('get', url);
         xhr.responseType = 'arraybuffer';
         xhr.setRequestHeader('Range', 'bytes=' + start + '-' + end);
-        xhr.onload = function() {
+        xhr.onload = function () {
             //bytesFetched += end - start + 1;
             resolve(cb(xhr.response));
         };
         xhr.send();
     });
 }
-
 function debounce(func, wait, immediate) {
     var timeout;
-    return function() {
+    return function () {
         var context = this;
         var args = arguments;
-        var later = function() {
+        var later = function () {
             timeout = null;
             if (!immediate) func.apply(context, args);
         };
@@ -550,39 +488,35 @@ function debounce(func, wait, immediate) {
         if (callNow) func.apply(context, args);
     };
 }
-
 function clamp(number, min, max) {
-  return Math.max(min, Math.min(number, max));
-}
+    return Math.max(min, Math.min(number, max));
+}// allow to remove an event listener without having a function reference
 
-// allow to remove an event listener without having a function reference
 function RegisteredEvent(obj, eventName, func) {
     this.obj = obj;
     this.eventName = eventName;
     this.func = func;
     obj.addEventListener(eventName, func);
 }
-RegisteredEvent.prototype.remove = function() {
+RegisteredEvent.prototype.remove = function () {
     this.obj.removeEventListener(this.eventName, this.func);
 }
 function addEvent(obj, eventName, func) {
     return new RegisteredEvent(obj, eventName, func);
 }
-
-function reportWarning(...args){
+function reportWarning(...args) {
     console.warn(...args);
 }
-function reportError(...args){
+function reportError(...args) {
     console.error(...args);
 }
-function reportDebug(...args){
+function reportDebug(...args) {
     console.debug(...args);
 }
-
-function byteArrayToIntegerLittleEndian(unsignedByteArray){
+function byteArrayToIntegerLittleEndian(unsignedByteArray) {
     var result = 0;
-    for (byte of unsignedByteArray){
-        result = result*256;
+    for (byte of unsignedByteArray) {
+        result = result * 256;
         result += byte
     }
     return result;
@@ -594,24 +528,21 @@ function byteArrayToFloat(byteArray) {
     else
         return view.getFloat64(byteArray.byteOffset);
 }
-function ByteParser(data){
+function ByteParser(data) {
     this.curIndex = 0;
     this.data = new Uint8Array(data);
 }
-ByteParser.prototype.readInteger = function(nBytes){
-    var result = byteArrayToIntegerLittleEndian(
-        this.data.slice(this.curIndex, this.curIndex + nBytes)
+ByteParser.prototype.readInteger = function (nBytes) {
+    var result = byteArrayToIntegerLittleEndian(this.data.slice(this.curIndex, this.curIndex + nBytes)
     );
     this.curIndex += nBytes;
     return result;
 }
-ByteParser.prototype.readBufferBytes = function(nBytes){
+ByteParser.prototype.readBufferBytes = function (nBytes) {
     var result = this.data.slice(this.curIndex, this.curIndex + nBytes);
     this.curIndex += nBytes;
     return result;
-}
-
-// BEGIN iso-bmff-parser-stream/lib/box/sidx.js (modified)
+}// BEGIN iso-bmff-parser-stream/lib/box/sidx.js (modified)
 // https://github.com/necccc/iso-bmff-parser-stream/blob/master/lib/box/sidx.js
 /* The MIT License (MIT)
 
@@ -634,62 +565,59 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.*/
-function sidx_parse (data, offset) {
-	var bp = new ByteParser(data),
-		version = bp.readInteger(1),
-		flags = bp.readInteger(3),
-		referenceId = bp.readInteger(4),
-		timeScale = bp.readInteger(4),
-		earliestPresentationTime = bp.readInteger(version === 0 ? 4 : 8),
-		firstOffset = bp.readInteger(4),
-		__reserved = bp.readInteger(2),
-		entryCount = bp.readInteger(2),
-		entries = [];
 
+function sidx_parse(data, offset) {
+    var bp = new ByteParser(data),
+        version = bp.readInteger(1),
+        flags = bp.readInteger(3),
+        referenceId = bp.readInteger(4),
+        timeScale = bp.readInteger(4),
+        earliestPresentationTime = bp.readInteger(version === 0 ? 4 : 8),
+        firstOffset = bp.readInteger(4),
+        __reserved = bp.readInteger(2),
+        entryCount = bp.readInteger(2),
+        entries = [
+        ];
     var totalBytesOffset = firstOffset + offset;
     var totalTicks = 0;
-	for (var i = entryCount; i > 0; i=i-1 ) {
+    for (var i = entryCount; i > 0; i = i - 1) {
         let referencedSize = bp.readInteger(4),
-			subSegmentDuration = bp.readInteger(4),
-			unused = bp.readBufferBytes(4)
-		entries.push({
-			referencedSize: referencedSize,
-			subSegmentDuration: subSegmentDuration,
-			unused: unused,
+            subSegmentDuration = bp.readInteger(4),
+            unused = bp.readBufferBytes(4)
+        entries.push({
+            referencedSize: referencedSize,
+            subSegmentDuration: subSegmentDuration,
+            unused: unused,
             start: totalBytesOffset,
             end: totalBytesOffset + referencedSize - 1, // inclusive
             tickStart: totalTicks,
             tickEnd: totalTicks + subSegmentDuration - 1,
             requested: false,
             have: false,
-		});
+        });
         totalBytesOffset = totalBytesOffset + referencedSize;
         totalTicks = totalTicks + subSegmentDuration;
-	}
-
-	return {
-		version: version,
-		flags: flags,
-		referenceId: referenceId,
-		timeScale: timeScale,
-		earliestPresentationTime: earliestPresentationTime,
-		firstOffset: firstOffset,
-		entries: entries
-	};
-}
-// END sidx.js
-
+    }
+    return {
+        version: version,
+        flags: flags,
+        referenceId: referenceId,
+        timeScale: timeScale,
+        earliestPresentationTime: earliestPresentationTime,
+        firstOffset: firstOffset,
+        entries: entries
+    };
+}// END sidx.js
 // BEGIN iso-bmff-parser-stream/lib/unbox.js (same license), modified
-function unbox(buf) {
-	var bp = new ByteParser(buf),
-		bufferLength = buf.length,
-		length,
-		typeData,
-		boxData
 
+function unbox(buf) {
+    var bp = new ByteParser(buf),
+        bufferLength = buf.length,
+        length,
+        typeData,
+        boxData
     length = bp.readInteger(4); // length of entire box,
     typeData = bp.readInteger(4);
-
     if (bufferLength - length < 0) {
         reportWarning('Warning: sidx table is cut off');
         return {
@@ -699,17 +627,13 @@ function unbox(buf) {
             data: bp.readBufferBytes(bufferLength)
         };
     }
-
     boxData = bp.readBufferBytes(length - 8);
-
     return {
         length: length,
         type: typeData,
         data: boxData
     };
-}
-// END unbox.js
-
+}// END unbox.js
 
 function extractWebmInitializationInfo(initializationSegment) {
     var result = {
@@ -720,8 +644,7 @@ function extractWebmInitializationInfo(initializationSegment) {
     (new EbmlDecoder()).readTags(initializationSegment, (tagType, tag) => {
         if (tag.name == 'TimecodeScale')
             result.timeScale = byteArrayToIntegerLittleEndian(tag.data);
-        else if (tag.name == 'Duration')
-            // Integer represented as a float (why??); units of TimecodeScale
+        else if (tag.name == 'Duration')        // Integer represented as a float (why??); units of TimecodeScale
             result.duration = byteArrayToFloat(tag.data);
         // https://lists.matroska.org/pipermail/matroska-devel/2013-July/004549.html
         // "CueClusterPosition in turn is relative to the segment's data start
@@ -732,16 +655,17 @@ function extractWebmInitializationInfo(initializationSegment) {
     });
     if (result.timeScale === null) {
         result.timeScale = 1000000;
-    }
-
-    // webm timecodeScale is the number of nanoseconds in a tick
+    }    // webm timecodeScale is the number of nanoseconds in a tick
     // Convert it to number of ticks per second to match mp4 convention
-    result.timeScale = 10**9/result.timeScale;
+
+    result.timeScale = 10 ** 9 / result.timeScale;
     return result;
 }
 function parseWebmCues(indexSegment, initInfo) {
-    var entries = [];
-    var currentEntry = {};
+    var entries = [
+    ];
+    var currentEntry = {
+    };
     var cuesOffset = initInfo.cuesOffset;
     (new EbmlDecoder()).readTags(indexSegment, (tagType, tag) => {
         if (tag.name == 'CueTime') {
@@ -756,17 +680,15 @@ function parseWebmCues(indexSegment, initInfo) {
                 entries[entries.length - 1].end = cuesOffset + byteStart - 1;
         } else if (tagType == 'end' && tag.name == 'CuePoint') {
             entries.push(currentEntry);
-            currentEntry = {};
+            currentEntry = {
+            };
         }
     });
     if (initInfo.duration)
         entries[entries.length - 1].tickEnd = initInfo.duration - 1;
     return entries;
-}
-
-// BEGIN node-ebml (modified) for parsing WEBM cues table
+}// BEGIN node-ebml (modified) for parsing WEBM cues table
 // https://github.com/node-ebml/node-ebml
-
 /* Copyright (c) 2013-2018 Mark Schmale and contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -787,113 +709,176 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.*/
 
 const schema = new Map([
-    [0x18538067, ['Segment', 'm']],
-    [0x1c53bb6b, ['Cues', 'm']],
-    [0xbb, ['CuePoint', 'm']],
-    [0xb3, ['CueTime', 'u']],
-    [0xb7, ['CueTrackPositions', 'm']],
-    [0xf7, ['CueTrack', 'u']],
-    [0xf1, ['CueClusterPosition', 'u']],
-    [0x1549a966, ['Info', 'm']],
-    [0x2ad7b1, ['TimecodeScale', 'u']],
-    [0x4489, ['Duration', 'f']],
+    [408125543,
+        [
+            'Segment',
+            'm'
+        ]],
+    [
+        475249515,
+        [
+            'Cues',
+            'm'
+        ]
+    ],
+    [
+        187,
+        [
+            'CuePoint',
+            'm'
+        ]
+    ],
+    [
+        179,
+        [
+            'CueTime',
+            'u'
+        ]
+    ],
+    [
+        183,
+        [
+            'CueTrackPositions',
+            'm'
+        ]
+    ],
+    [
+        247,
+        [
+            'CueTrack',
+            'u'
+        ]
+    ],
+    [
+        241,
+        [
+            'CueClusterPosition',
+            'u'
+        ]
+    ],
+    [
+        357149030,
+        [
+            'Info',
+            'm'
+        ]
+    ],
+    [
+        2807729,
+        [
+            'TimecodeScale',
+            'u'
+        ]
+    ],
+    [
+        17545,
+        [
+            'Duration',
+            'f'
+        ]
+    ],
 ]);
-
-
 function EbmlDecoder() {
     this.buffer = null;
     this.emit = null;
-    this.tagStack = [];
+    this.tagStack = [
+    ];
     this.cursor = 0;
 }
-EbmlDecoder.prototype.readTags = function(chunk, onParsedTag) {
+EbmlDecoder.prototype.readTags = function (chunk, onParsedTag) {
     this.buffer = new Uint8Array(chunk);
     this.emit = onParsedTag;
-
     while (this.cursor < this.buffer.length) {
         if (!this.readTag() || !this.readSize() || !this.readContent()) {
             break;
         }
     }
 }
-EbmlDecoder.prototype.getSchemaInfo = function(tag) {
+EbmlDecoder.prototype.getSchemaInfo = function (tag) {
     if (Number.isInteger(tag) && schema.has(tag)) {
-        var name, type;
-        [name, type] = schema.get(tag);
-        return {name, type};
+        var name,
+            type;
+        [
+            name,
+            type
+        ] = schema.get(tag);
+        return {
+            name,
+            type
+        };
     }
     return {
         type: null,
         name: 'unknown',
     };
 }
-EbmlDecoder.prototype.readTag = function() {
+EbmlDecoder.prototype.readTag = function () {
     if (this.cursor >= this.buffer.length) {
         return false;
     }
-
     const tag = readVint(this.buffer, this.cursor);
     if (tag == null) {
         return false;
     }
-
     const tagObj = {
         tag: tag.value,
         ...this.getSchemaInfo(tag.valueWithLeading1),
         start: this.cursor,
-        end: this.cursor + tag.length,  // exclusive; also overwritten below
+        end: this.cursor + tag.length, // exclusive; also overwritten below
     };
     this.tagStack.push(tagObj);
-
     this.cursor += tag.length;
     return true;
 }
-EbmlDecoder.prototype.readSize = function() {
+EbmlDecoder.prototype.readSize = function () {
     const tagObj = this.tagStack[this.tagStack.length - 1];
-
     if (this.cursor >= this.buffer.length) {
         return false;
     }
-
     const size = readVint(this.buffer, this.cursor);
     if (size == null) {
         return false;
     }
-
     tagObj.dataSize = size.value;
-
     // unknown size
-    if (size.value === -1) {
-        tagObj.end = -1;
+    if (size.value === - 1) {
+        tagObj.end = - 1;
     } else {
         tagObj.end += size.value + size.length;
     }
-
     this.cursor += size.length;
     tagObj.dataStart = this.cursor;
     return true;
 }
-EbmlDecoder.prototype.readContent = function() {
-    const { type, dataSize, ...rest } = this.tagStack[
+EbmlDecoder.prototype.readContent = function () {
+    const {
+        type,
+        dataSize,
+        ...rest
+    }
+        = this.tagStack[
         this.tagStack.length - 1
-    ];
-
+        ];
     if (type === 'm') {
-        this.emit('start', { type, dataSize, ...rest });
+        this.emit('start', {
+            type,
+            dataSize,
+            ...rest
+        });
         return true;
     }
-
     if (this.buffer.length < this.cursor + dataSize) {
         return false;
     }
-
     const data = this.buffer.subarray(this.cursor, this.cursor + dataSize);
     this.cursor += dataSize;
-
     this.tagStack.pop(); // remove the object from the stack
-
-    this.emit('tag', { type, dataSize, data, ...rest });
-
+    this.emit('tag', {
+        type,
+        dataSize,
+        data,
+        ...rest
+    });
     while (this.tagStack.length > 0) {
         const topEle = this.tagStack[this.tagStack.length - 1];
         if (this.cursor < topEle.end) {
@@ -903,10 +888,7 @@ EbmlDecoder.prototype.readContent = function() {
         this.tagStack.pop();
     }
     return true;
-}
-
-
-// user234683 notes: The matroska variable integer format is as follows:
+}// user234683 notes: The matroska variable integer format is as follows:
 // The first byte is where the length of the integer in bytes is determined.
 // The number of bytes for the integer is equal to the number of leading
 // zeroes in that first byte PLUS 1. Then there is a single 1 bit separator,
@@ -916,13 +898,12 @@ EbmlDecoder.prototype.readContent = function() {
 // EBML Tag IDs in the schema table above
 // The byte-length includes the first byte. So one could also say the number
 // of leading zeros is the number of subsequent bytes to include.
+
 function readVint(buffer, start = 0) {
     const length = 8 - Math.floor(Math.log2(buffer[start]));
-
     if (start + length > buffer.length) {
         return null;
     }
-
     let value = buffer[start] & ((1 << (8 - length)) - 1);
     let valueWithLeading1 = buffer[start] & ((1 << (8 - length + 1)) - 1);
     for (let i = 1; i < length; i += 1) {
@@ -932,7 +913,11 @@ function readVint(buffer, start = 0) {
         // https://github.com/node-ebml/node-ebml/issues/49
         if (i === 7) {
             if (value >= 2 ** 8 && buffer[start + 7] > 0) {
-                return { length, value: -1, valueWithLeading1: -1 };
+                return {
+                    length,
+                    value: - 1,
+                    valueWithLeading1: - 1
+                };
             }
         }
         value *= 2 ** 8;
@@ -940,7 +925,9 @@ function readVint(buffer, start = 0) {
         valueWithLeading1 *= 2 ** 8;
         valueWithLeading1 += buffer[start + i];
     }
-
-    return { length, value, valueWithLeading1 };
-}
-// END node-ebml
+    return {
+        length,
+        value,
+        valueWithLeading1
+    };
+}// END node-ebml

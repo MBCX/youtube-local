@@ -387,9 +387,9 @@ def head(url, use_tor=False, report_text=None, max_redirects=10):
             round(time.monotonic() - start_time,3))
     return response
 
-mobile_user_agent = 'Mozilla/5.0 (Linux; Android 7.0; Redmi Note 4 Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Mobile Safari/537.36'
+mobile_user_agent = 'Mozilla/5.0 (Linux; Android 11; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.181 Mobile Safari/537.36'
 mobile_ua = (('User-Agent', mobile_user_agent),)
-desktop_user_agent = 'Mozilla/5.0 (Windows NT 6.1; rv:52.0) Gecko/20100101 Firefox/52.0'
+desktop_user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
 desktop_ua = (('User-Agent', desktop_user_agent),)
 json_header = (('Content-Type', 'application/json'),)
 desktop_xhr_headers = (

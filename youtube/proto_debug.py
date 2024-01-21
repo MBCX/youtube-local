@@ -571,7 +571,8 @@ def pp(obj, indent=1):
     print(_pp(obj, indent))
 
 
-desktop_user_agent = 'Mozilla/5.0 (Windows NT 6.1; rv:52.0) Gecko/20100101 Firefox/52.0'
+# desktop_user_agent = 'Mozilla/5.0 (Windows NT 6.1; rv:52.0) Gecko/20100101 Firefox/52.0'
+desktop_user_agent = "Mozilla/5.0 (Windows NT 10.0; rv:109.0) Gecko/20100101 Firefox/109.0"
 desktop_headers = (
     ('Accept', '*/*'),
     ('Accept-Language', 'en-US,en;q=0.5'),

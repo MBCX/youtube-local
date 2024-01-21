@@ -24,10 +24,21 @@
             /* Prevent uninterupted words in description overflowing the page: https://daverupert.com/2017/09/breaking-the-grid/ */
             min-width: 0px;
         }
-            .short-description{
-                line-height: 1em;
+            .short-description {
+                position: relative;
                 max-height: 6em;
-                overflow: hidden;
+                overflow: auto;
+            }
+
+            .short-description::after {
+                content: "";
+                position: sticky;
+                left: 0;
+                bottom: 0;
+                display: block;
+                height: 1rem;
+                width: 100%;
+                background-image: linear-gradient(0deg, var(--background-color), transparent);
             }
 
     .channel-tabs{

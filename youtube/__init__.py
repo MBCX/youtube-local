@@ -90,6 +90,8 @@ font_choices = {
     2: '"liberation serif", "times new roman", calibri, carlito, serif',
     3: 'verdana, sans-serif',
     4: 'tahoma, sans-serif',
+    5: "monospace",
+    6: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
 }
 
 @yt_app.route('/shared.css')

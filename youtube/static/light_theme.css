@@ -19,3 +19,11 @@ body{
     background-color: #888888;
 }
 
+a:link {
+    text-decoration: none;
+}
+
+a:link:hover {
+    text-decoration: underline;
+}
+

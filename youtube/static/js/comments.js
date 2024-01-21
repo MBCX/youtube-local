@@ -1,20 +1,26 @@
-function onClickReplies(e) {
-  var details = e.target.parentElement;
-  // e.preventDefault();
-  console.log("loading replies ..");
-  doXhr(details.getAttribute("src") + "&slim=1", (html) => {
-    var div = details.querySelector(".comment_page");
-    div.innerHTML = html;
-  });
-  details.removeEventListener('click', onClickReplies);
+import { doXhr } from "./common.js";
+
+async function onClickReplies(e) {
+    const details = e.target.parentElement;
+    const commentPages = details.querySelector(".comment_page");
+    // e.preventDefault();
+    console.log("loading replies...");
+    doXhr(
+        details.getAttribute("src") + "&slim=1",
+        html => commentPages.innerHTML = html
+    );
 }
 
-window.addEventListener('DOMContentLoaded', function() {
-    QA("details.replies").forEach(details => {
-      details.addEventListener('click', onClickReplies);
-      details.addEventListener('auxclick', (e) => {
-        if (e.target.parentElement !== details) return;
-        if (e.button == 1) window.open(details.getAttribute("src"));
-      });
+addEventListener("DOMContentLoaded", function () {
+    const detailReplies = document.querySelectorAll("details.replies");
+    detailReplies.forEach(details => {
+        details.addEventListener("click", onClickReplies, { once: true });
+        details.addEventListener("auxclick", e => {
+            if (e.target.parentElement !== details) {
+                return;
+            } else if (e.button === 1) {
+                open(details.getAttribute("src"));
+            }
+        });
     });
 });

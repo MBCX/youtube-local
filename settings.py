@@ -259,6 +259,8 @@ For security reasons, enabling this is not recommended.''',
             (2, 'Liberation Serif'),
             (3, 'Verdana'),
             (4, 'Tahoma'),
+            (5, 'monospace'),
+            (6, 'system-ui'),
         ],
         'category': 'interface',
     }),
@@ -386,8 +388,8 @@ if os.path.isfile("settings.txt"):
     data_dir = os.path.normpath('./data')
 else:
     print("Running in non-portable mode")
-    settings_dir = os.path.expanduser(os.path.normpath("~/.youtube-local"))
-    data_dir = os.path.expanduser(os.path.normpath("~/.youtube-local/data"))
+    settings_dir = os.path.expanduser(os.path.normpath("./.youtube-local"))
+    data_dir = os.path.expanduser(os.path.normpath("./.youtube-local/data"))
     if not os.path.exists(settings_dir):
         os.makedirs(settings_dir)
 

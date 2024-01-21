@@ -1,81 +1,44 @@
-var video = document.querySelector('video');
+import { clamp, getVideoID, lerpInverse, percent } from "./common.js";
 
-function setVideoDimensions(height, width){
-    var body = document.querySelector('body');
-    body.style.setProperty('--video_height', String(height));
-    body.style.setProperty('--video_width', String(width));
-    if (height < 240)
-        body.style.setProperty('--plyr-control-spacing-num', '3');
-    else
-        body.style.setProperty('--plyr-control-spacing-num', '10');
-    var theaterWidth = Math.max(640, data['video_duration'] || 0, width);
-    body.style.setProperty('--theater_video_target_width', String(theaterWidth));
-    function setVideoAspectRatio(){
-        // Recreate the video constant aspect ratio media query
-        // in javascript because media queries do not accept css
-        // variables and cannot be modified by javascript
-        var videoContainerInner = document.querySelector('#video-container-inner');
-        if (window.innerWidth < width){
-            videoContainerInner.style.paddingTop = String(100*height/width) + '%';
-            videoContainerInner.style.height = '0px';
-        } else {
-            videoContainerInner.style.paddingTop = '';
-            videoContainerInner.style.height = '';
-        }
-    }
-    if (data.settings.theater_mode) {
-        setVideoAspectRatio();
-        window.onresize = function(event) { setVideoAspectRatio() };
-    }
+const intlLang = "default";
+
+/** @type {HTMLVideoElement | null} */
+let video = null;
+if (data.settings.video_player === 0) {
+    video = document.querySelector('#video-container-inner #mini-player + video');
+} else {
+    video = document.querySelector("video");
 }
-function changeQuality(selection) {
-    var currentVideoTime = video.currentTime;
-    var videoPaused = video.paused;
-    var videoSpeed = video.playbackRate;
-    var srcInfo;
-    if (avMerge)
-        avMerge.close();
-    if (selection.type == 'uni'){
-        srcInfo = data['uni_sources'][selection.index];
-        video.src = srcInfo.url;
-    } else {
-        srcInfo = data['pair_sources'][selection.index];
-        avMerge = new AVMerge(video, srcInfo, currentVideoTime);
-    }
-    setVideoDimensions(srcInfo.height, srcInfo.width);
-    video.currentTime = currentVideoTime;
-    if (!videoPaused){
-        video.play();
-    }
-    video.playbackRate = videoSpeed;
-}
+const numberFormat = new Intl.NumberFormat(intlLang, { notation: "compact" });
 
 // Initialize av-merge
-var avMerge;
+window.avMerge = null;
 if (data.using_pair_sources) {
-    var srcPair = data['pair_sources'][data['pair_idx']];
-    avMerge = new AVMerge(video, srcPair, 0);
+    const srcPair = data['pair_sources'][data['pair_idx']];
+    window.avMerge = new AVMerge(video, srcPair, 0);
 }
 
 // Quality selector
-var qualitySelector = document.querySelector('#quality-select')
-if (qualitySelector)
+const qualitySelector = document.querySelector('#quality-select');
+if (qualitySelector) {
     qualitySelector.addEventListener(
-        'change', function(e) {
+        "change",
+        function () {
             changeQuality(JSON.parse(this.value))
         }
     );
+}
 
 // Set up video start time from &t parameter
-if (data.time_start != 0 && video)
+if (data.time_start !== 0 && video)
     video.currentTime = data.time_start;
 
 // External video speed control
-var speedInput = document.querySelector('#speed-control');
+const speedInput = document.querySelector('#speed-control');
 speedInput.addEventListener('keyup', (event) => {
     if (event.key === 'Enter') {
-        var speed = parseFloat(speedInput.value);
-        if(!isNaN(speed)){
+        const speed = parseFloat(speedInput.value);
+        if (!Number.isNaN(speed)) {
             video.playbackRate = speed;
         }
     }
@@ -83,50 +46,47 @@ speedInput.addEventListener('keyup', (event) => {
 
 
 // Playlist lazy image loading
-if (data.playlist && data.playlist['id'] !== null) {
+if (data.playlist && data.playlist['id'] != null) {
     // lazy load playlist images
     // copied almost verbatim from
     // https://css-tricks.com/tips-for-rolling-your-own-lazy-loading/
     // IntersectionObserver isn't supported in pre-quantum
     // firefox versions, but the alternative of making it
     // manually is a performance drain, so oh well
-    var observer = new IntersectionObserver(lazyLoad, {
+    const observer = new IntersectionObserver(lazyLoad, {
+        // where in relation to the edge of the viewport, we are observing
+        rootMargin: "100px",
 
-      // where in relation to the edge of the viewport, we are observing
-      rootMargin: "100px",
-
-      // how much of the element needs to have intersected
-      // in order to fire our loading function
-      threshold: 1.0
-
+        // how much of the element needs to have intersected
+        // in order to fire our loading function
+        threshold: 1.0
     });
 
     function lazyLoad(elements) {
-      elements.forEach(item => {
-        if (item.intersectionRatio > 0) {
+        elements.forEach(item => {
+            if (item.intersectionRatio > 0) {
+                // set the src attribute to trigger a load
+                item.target.src = item.target.dataset.src;
 
-          // set the src attribute to trigger a load
-          item.target.src = item.target.dataset.src;
-
-          // stop observing this element. Our work here is done!
-          observer.unobserve(item.target);
-        };
-      });
+                // stop observing this element. Our work here is done!
+                observer.unobserve(item.target);
+            };
+        });
     };
 
     // Tell our observer to observe all img elements with a "lazy" class
-    var lazyImages = document.querySelectorAll('img.lazy');
+    const lazyImages = document.querySelectorAll('img.lazy');
     lazyImages.forEach(img => {
-      observer.observe(img);
+        observer.observe(img);
     });
 }
 
 
 // Autoplay
 if (data.settings.related_videos_mode !== 0 || data.playlist !== null) {
-    let playability_error = !!data.playability_error;
+    const playability_error = !!data.playability_error;
     let isPlaylist = false;
-    if (data.playlist !== null && data.playlist['current_index'] !== null)
+    if (data.playlist != null && data.playlist['current_index'] != null)
         isPlaylist = true;
 
     // read cookies on whether to autoplay
@@ -153,7 +113,7 @@ if (data.settings.related_videos_mode !== 0 || data.playlist !== null) {
     }
 
     let autoplayEnabled = 0;
-    if(cookieValue.length === 0){
+    if (cookieValue.length === 0) {
         autoplayEnabled = 0;
     } else {
         autoplayEnabled = Number(cookieValue);
@@ -171,7 +131,7 @@ if (data.settings.related_videos_mode !== 0 || data.playlist !== null) {
         cookie += '_' + playlist_id;
 
     checkbox.addEventListener( 'change', function() {
-        if(this.checked) {
+        if (this.checked) {
             autoplayEnabled = 1;
             document.cookie = cookie + '=1; SameSite=Strict';
         } else {
@@ -180,9 +140,9 @@ if (data.settings.related_videos_mode !== 0 || data.playlist !== null) {
         }
     });
 
-    if(!playability_error){
+    if (!playability_error) {
         // play the video if autoplay is on
-        if(autoplayEnabled){
+        if (autoplayEnabled) {
             video.play();
         }
     }
@@ -191,7 +151,7 @@ if (data.settings.related_videos_mode !== 0 || data.playlist !== null) {
     let nextVideoUrl;
     if (isPlaylist) {
         let currentIndex = data.playlist['current_index'];
-        if (data.playlist['current_index']+1 == data.playlist['items'].length)
+        if (data.playlist['current_index'] + 1 == data.playlist['items'].length)
             nextVideoUrl = null;
         else
             nextVideoUrl = data.playlist['items'][data.playlist['current_index']+1]['url'];
@@ -211,18 +171,197 @@ if (data.settings.related_videos_mode !== 0 || data.playlist !== null) {
     // go to next video when video ends
     // https://stackoverflow.com/a/2880950
     if (nextVideoUrl) {
-        if(playability_error){
+        if (playability_error) {
             videoEnded();
         } else {
-            video.addEventListener('ended', videoEnded, false);
+            video.addEventListener("ended", videoEnded, false);
         }
-        function nextVideo(){
-            if(autoplayEnabled){
-                window.location.href = nextVideoUrl;
+
+        function nextVideo() {
+            if (autoplayEnabled) {
+                location.href = nextVideoUrl;
             }
         }
+
         function videoEnded(e) {
-            window.setTimeout(nextVideo, nextVideoDelay);
+            setTimeout(nextVideo, nextVideoDelay);
         }
     }
 }
+
+function allowedCountriesFormated() {
+    /** @type {string} */
+    const displayNames = new Intl.DisplayNames(intlLang, { type: "region" });
+    const countries = document.querySelector(".allowed-countries");
+    const countriesContainer = countries.innerText;
+    const countriesText = countriesContainer.split(":")[1].trim();
+    let formattedCountries = "";
+    countries.innerText = "";
+    countriesText.split(",").forEach((country, i) => {
+        const countryName = displayNames.of(country.trim());
+        if (i === countriesText.length - 1) {
+            formattedCountries += `${countryName}`;
+        } else {
+            formattedCountries += `${countryName}, `;
+        }
+    });
+    countries.innerText = `Allowed countries: ${formattedCountries}`;
+}
+
+async function publishDateFormatted() {
+    const publishEl = document.querySelector("time");
+    const dateText = publishEl.innerText.split(" ");
+    const stringDate = dateText[2];
+    publishEl.innerText = `Published on ${Intl.DateTimeFormat(
+        intlLang,
+        {
+            dateStyle: "long",
+            timeZone: Intl.DateTimeFormat(intlLang).resolvedOptions().timeZone
+        }
+    ).format(
+        new Date(stringDate)
+    )}`;
+    
+    /** @type {HTMLSpanElement} */
+    const likesEl = document.querySelector(".likes-dislikes");
+    const request = fetch(`/https://ryd-proxy.kavin.rocks/votes/${getVideoID()}`);
+    const [_, json] = await Promise.all([request, (await request).json()])
+    likesEl.innerText = `${numberFormat.format(json.likes - 1)} likes, ${numberFormat.format(json.dislikes)} dislikes`;
+}
+
+function videoViewsFormatted() {
+    /** @type {HTMLSpanElement} */
+    const viewsEl = document.querySelector(".views");
+    const views = Number(document.querySelector(".views").innerText.split(" ")[0].split(",").join(""));
+    viewsEl.innerText = `${numberFormat.format(views)} views`;
+    viewsEl.title = `${views} views`;
+}
+
+function formatUILikeYT() {
+    publishDateFormatted();
+    videoViewsFormatted();
+}
+
+function setupVideoThumbnail() {
+    /** @type {HTMLDivElement} */
+    const miniPlayer = document.querySelector("#mini-player");
+
+    /** @type {HTMLVideoElement} */
+    const miniPlayerVideo = document.querySelector("#mini-player video");
+    
+    /** @type {HTMLDivElement} */
+    const videoContainer = document.querySelector("#video-container");
+    const miniPlayerVideoSource = miniPlayerVideo.querySelector("source");
+
+    const containerRect = videoContainer.getBoundingClientRect();
+    const miniPlayerRect = miniPlayer.getBoundingClientRect();
+
+    miniPlayer.style.opacity = "0";
+
+    // Make sure the browser has enough video data.
+    miniPlayerVideo.addEventListener("canplay", () => {
+        let seekTime = 0;
+
+        videoContainer.addEventListener("mousemove", e => {
+            const mouseX = e.offsetX;
+            const mouseY = e.offsetY;
+
+            // Emulates where the "start" and "end"
+            // of the built-in browser player duration
+            // bar are.
+            let miniPlayerStartPos = 0;
+            let miniPlayerEndPos = 0;
+    
+            if (navigator.userAgent.includes("Firefox")) {
+                // miniPlayerStartPos = Math.floor(containerRect.width * 0.060);
+                miniPlayerStartPos = percent(6, containerRect.width);
+                if (video.querySelector("track") == null) {
+                    miniPlayerEndPos = Math.floor(containerRect.width * 0.692);
+                } else {
+                    miniPlayerEndPos = Math.floor(containerRect.width * 0.56);
+                }
+                // miniPlayer.style.opacity = (
+                //     mouseY > containerRect.height * 0.9 &&
+                //     mouseY <= containerRect.height * 0.96
+                // ) ? "1" : "0";
+                const mouseRange = lerpInverse(
+                    mouseY,
+                    0,
+                    containerRect.height
+                );
+                miniPlayer.style.opacity = (
+                    mouseRange > 0.8 &&
+                    mouseRange < 0.95
+                ) ? "1" : "0";
+            }
+
+            // Make sure that the miniplayer, when
+            // reaching the end of the video seekbar
+            // in the browser's video player, makes the
+            // preview go to the end.
+            const miniPlayerWidthHalf = miniPlayerRect.width * 0.5;
+            const miniPlayerPos = clamp(
+                mouseX,
+                miniPlayerStartPos,
+                miniPlayerEndPos
+            );
+
+            // Converts it to a 0 - 1 scale.
+            // Where 0 is where value of miniPlayerStartPos
+            const seekTimePercent = lerpInverse(mouseX, miniPlayerStartPos, miniPlayerEndPos);
+
+            // Somewhat magic calculation here, but
+            // is the offset of the seek time in the mini
+            // player with the video.
+            const seekOffset = miniPlayerWidthHalf - miniPlayerWidthHalf * 0.5;
+            seekTime = clamp(
+                (video.duration * seekTimePercent) - seekOffset,
+                0,
+                video.duration
+            );
+            miniPlayer.style.setProperty(
+                "--video-hover-percent",
+                `${miniPlayerPos - miniPlayerWidthHalf}px`
+            );
+            miniPlayerVideo.currentTime = Number.isFinite(seekTime) ? seekTime : 0;
+        });
+    });
+
+    // Change source to the lowest quality for faster
+    // seaking inside the mini player.
+    miniPlayerVideoSource.src = "";
+    miniPlayerVideoSource.type = "";
+    if (data.using_pair_sources)
+    {
+        // Use webm.
+        miniPlayerVideoSource.src = data.pair_sources[0].videos[0].url;
+        miniPlayerVideoSource.type = data.pair_sources[0].videos[0].type;
+    }
+    else if (data.uni_sources.length !== 0)
+    {
+        miniPlayerVideoSource.src = data.uni_sources[0].url;
+        miniPlayerVideoSource.type = data.uni_sources[0].type;
+    }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+    formatUILikeYT();
+    try {
+        allowedCountriesFormated();
+    } catch (error) {}
+}, { once: true });
+
+// save watched time to session storage
+const video_id = window.location.href.split("?v=")[1].split("&")[0]
+window.addEventListener("beforeunload", function(e) {
+    sessionStorage.setItem(video_id, video.currentTime);
+});
+
+video.addEventListener("loadedmetadata", function () {
+    if (sessionStorage.getItem(video_id) !== null) {
+        const prevWatchTime = sessionStorage.getItem(video_id);
+        if (video.duration > prevWatchTime && prevWatchTime > 0) {
+            video.currentTime = prevWatchTime;
+        }
+    }
+});

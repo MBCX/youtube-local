@@ -12,3 +12,5 @@ latest-dist.zip
 *.7z
 *.zip
 *venv*
+*env*
+*.vs

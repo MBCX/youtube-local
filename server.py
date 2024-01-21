@@ -52,9 +52,10 @@ def parse_range(range_header, content_length):
 
 def proxy_site(env, start_response, video=False):
     send_headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
         'Accept': '*/*',
     }
+
     current_range_start = 0
     range_end = None
     if 'HTTP_RANGE' in env:
@@ -169,6 +170,7 @@ site_handlers = {
     'ytimg.com': proxy_site,
     'ggpht.com': proxy_site,
     'googleusercontent.com': proxy_site,
+    'ryd-proxy.kavin.rocks': proxy_site,
     'sponsor.ajay.app': proxy_site,
     'googlevideo.com': proxy_video,
 }
