@@ -175,21 +175,37 @@ function Stream(avMerge, source, startTime, avRatio) {
 }
 Stream.prototype.setup = async function () {
     // Group requests together
-    if (this.initRange.end + 1 == this.indexRange.start) {
-        fetchRange(this.url, this.initRange.start, this.indexRange.end, (buffer) => {
-            var init_end = this.initRange.end - this.initRange.start + 1;
-            var index_start = this.indexRange.start - this.initRange.start;
-            var index_end = this.indexRange.end - this.initRange.start + 1;
-            this.setupInitSegment(buffer.slice(0, init_end));
-            this.setupSegmentIndex(buffer.slice(index_start, index_end));
-        }
-        )
+    if (this.initRange.end+1 == this.indexRange.start){
+        fetchRange(
+            this.url,
+            this.initRange.start,
+            this.indexRange.end,
+            'Initialization+index segments',
+        ).then(
+            (buffer) => {
+                var init_end = this.initRange.end - this.initRange.start + 1;
+                var index_start = this.indexRange.start - this.initRange.start;
+                var index_end = this.indexRange.end - this.initRange.start + 1;
+                this.setupInitSegment(buffer.slice(0, init_end));
+                this.setupSegmentIndex(buffer.slice(index_start, index_end));
+            }
+        );
     } else {
         // initialization data
-        await fetchRange(this.url, this.initRange.start, this.initRange.end, this.setupInitSegment.bind(this),);
+        await fetchRange(
+            this.url,
+            this.initRange.start,
+            this.initRange.end,
+            'Initialization segment',
+        ).then(this.setupInitSegment.bind(this));
+
         // sidx (segment index) table
-        fetchRange(this.url, this.indexRange.start, this.indexRange.end, this.setupSegmentIndex.bind(this)
-        );
+        fetchRange(
+            this.url,
+            this.indexRange.start,
+            this.indexRange.end,
+            'Index segment',
+        ).then(this.setupSegmentIndex.bind(this));
     }
 }
 Stream.prototype.setupInitSegment = function (initSegment) {
@@ -428,7 +444,12 @@ Stream.prototype.fetchSegment = function (segmentIdx) {
     entry.requested = true;
     this.reportDebug('Fetching segment', segmentIdx, ', bytes', entry.start, entry.end, ', seconds', entry.tickStart / this.sidx.timeScale, (entry.tickEnd + 1) / this.sidx.timeScale
     )
-    fetchRange(this.url, entry.start, entry.end, this.appendSegment.bind(this, segmentIdx),);
+    fetchRange(
+        this.url,
+        entry.start,
+        entry.end,
+        String(this.streamType) + ' segment ' + String(segmentIdx),
+    ).then(this.appendSegment.bind(this, segmentIdx));
 }
 Stream.prototype.fetchSegmentIfNeeded = function (segmentIdx) {
     if (segmentIdx < 0 || segmentIdx >= this.sidx.entries.length) {
@@ -460,15 +481,51 @@ Stream.prototype.reportError = function (...args) {
     reportError(String(this.streamType) + ':', ...args);
 }// Utility functions
 
-function fetchRange(url, start, end, cb) {
+// https://gomakethings.com/promise-based-xhr/
+// https://stackoverflow.com/a/30008115
+// http://lofi.limo/blog/retry-xmlhttprequest-carefully
+function fetchRange(url, start, end, debugInfo) {
     return new Promise((resolve, reject) => {
+        var retryCount = 0;
         var xhr = new XMLHttpRequest();
+        function onFailure(err, message, maxRetries=5){
+            message = debugInfo + ': ' + message + ' - Err: ' + String(err);
+            retryCount++;
+            if (retryCount > maxRetries || xhr.status == 403){
+                reportError('fetchRange error while fetching ' + message);
+                reject(message);
+                return;
+            } else {
+                reportWarning('Failed to fetch ' + message
+                    + '. Attempting retry '
+                    + String(retryCount) +'/' + String(maxRetries));
+            }
+
+            // Retry in 1 second, doubled for each next retry
+            setTimeout(function(){
+                xhr.open('get',url);
+                xhr.send();
+            }, 1000*Math.pow(2,(retryCount-1)));
+        }
         xhr.open('get', url);
+        xhr.timeout = 15000;
         xhr.responseType = 'arraybuffer';
         xhr.setRequestHeader('Range', 'bytes=' + start + '-' + end);
-        xhr.onload = function () {
-            //bytesFetched += end - start + 1;
-            resolve(cb(xhr.response));
+        xhr.onload = function (e) {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(xhr.response);
+            } else {
+                onFailure(e, 
+                    'Status '
+                    + String(xhr.status) + ' ' + String(xhr.statusText)
+                );
+            }
+        };
+        xhr.onerror = function (event) {
+            onFailure(e, 'Network error');
+        };
+        xhr.ontimeout = function (event){
+            onFailure(null, 'Timeout (15s)', maxRetries=1);
         };
         xhr.send();
     });
