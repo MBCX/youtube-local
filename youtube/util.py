@@ -330,7 +330,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
                    )
             )
         ):
-            print(response.status, response.reason, response.getheaders())
+            print(response.status, response.reason, response.headers)
             ip = re.search(
                 br'IP address: ((?:[\da-f]*:)+[\da-f]+|(?:\d+\.)+\d+)',
                 content)
@@ -664,11 +664,11 @@ INNERTUBE_CLIENTS = {
                 'hl': 'en',
                 'gl': 'US',
                 'clientName': 'ANDROID',
-                'clientVersion': '17.31.35',
+                'clientVersion': '18.11.34',
                 'osName': 'Android',
                 'osVersion': '12',
-                'androidSdkVersion': 31,
-                'userAgent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 12) gzip'
+                'androidSdkVersion': 30,
+                'userAgent': 'com.google.android.youtube/18.11.34 (Linux; U; Android 12) gzip'
             },
             # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
             #'thirdParty': {
