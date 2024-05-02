@@ -55,5 +55,25 @@ e.g. Firefox playback speed options */
     overflow-y: scroll;
     /* Subtract margin between controls and menu, and controls height,
        and height of top menu button*/
-    max-height: calc(var(--video_height)*1px - 10px - 40px - 42px*var(--plyr-control-spacing-num)/10);
+    max-height: calc(var(--video_height) * 1px - 10px - 40px - 42px * var(--plyr-control-spacing-num) / 10);
+}
+
+/* Hide the thumb when a video reaches sponsorblock segment */
+
+/* Firefox specific */
+input[id^="plyr-seek-"].hidden-thumb::-moz-range-thumb
+{
+    transform: scale(0) !important;
+}
+
+input[id^="plyr-seek-"].hidden-thumb::-webkit-slider-thumb
+{
+    transform: scale(0) !important;
+}
+
+input[id^="plyr-seek-"]
+{
+    cursor: pointer;
+    transform-origin: center;
+    transition: transform 400ms ease, box-shadow 300ms ease !important;
 }

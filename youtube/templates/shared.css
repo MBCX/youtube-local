@@ -30,12 +30,16 @@ body{
 }
 
     header{
+        position: -webkit-sticky;
+        position: sticky;
+        top: 0;
         background-color:#333333;
         min-height: 50px;
         padding: 0px 5px;
 
         display: flex;
         justify-content: center;
+        z-index: 4;
     }
         #site-search{
             max-width: 670px;

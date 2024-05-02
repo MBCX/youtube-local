@@ -10,7 +10,6 @@ if (data.settings.video_player === 0) {
     video = document.querySelector("video");
 }
 const numberFormat = new Intl.NumberFormat(intlLang, { notation: "compact" });
-var video = document.querySelector('video');
 
 function setVideoDimensions(height, width){
     var body = document.querySelector('body');
@@ -389,13 +388,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 }, { once: true });
 
 // save watched time to session storage
-const video_id = window.location.href.split("?v=")[1].split("&")[0]
-window.addEventListener("beforeunload", function(e) {
+const video_id = location.href.split("?v=")[1].split("&")[0]
+addEventListener("beforeunload", function(e) {
     sessionStorage.setItem(video_id, video.currentTime);
 });
 
 video.addEventListener("loadedmetadata", function () {
-    if (sessionStorage.getItem(video_id) !== null) {
+    if (sessionStorage.getItem(video_id) !== null)
+    {
         const prevWatchTime = sessionStorage.getItem(video_id);
         if (video.duration > prevWatchTime && prevWatchTime > 0) {
             video.currentTime = prevWatchTime;
