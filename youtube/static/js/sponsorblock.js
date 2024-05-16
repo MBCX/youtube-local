@@ -75,8 +75,6 @@ async function load_sponsorblock() {
     const [_, api] = await Promise.all([req, (await req).json()]);
     const gradientStops = [];
 
-    let hideThumb = false;
-
     for (const video of api)
     {
         // Because we"re using a hash as input for the API,

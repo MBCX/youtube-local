@@ -388,12 +388,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 }, { once: true });
 
 // save watched time to session storage
-const video_id = location.href.split("?v=")[1].split("&")[0]
 addEventListener("beforeunload", function(e) {
-    sessionStorage.setItem(video_id, video.currentTime);
+    sessionStorage.setItem(getVideoID(), video.currentTime);
 });
 
 video.addEventListener("loadedmetadata", function () {
+    const video_id = getVideoID();
     if (sessionStorage.getItem(video_id) !== null)
     {
         const prevWatchTime = sessionStorage.getItem(video_id);

@@ -58,6 +58,11 @@ e.g. Firefox playback speed options */
     max-height: calc(var(--video_height) * 1px - 10px - 40px - 42px * var(--plyr-control-spacing-num) / 10);
 }
 
+input[id^="plyr-"]
+{
+    cursor: pointer;
+}
+
 /* Hide the thumb when a video reaches sponsorblock segment */
 
 /* Firefox specific */
@@ -73,7 +78,6 @@ input[id^="plyr-seek-"].hidden-thumb::-webkit-slider-thumb
 
 input[id^="plyr-seek-"]
 {
-    cursor: pointer;
     transform-origin: center;
     transition: transform 400ms ease, box-shadow 300ms ease !important;
 }

@@ -143,10 +143,12 @@ export function copyTextToClipboard(text) {
 }
 
 export function getVideoID() {
-    if (!location.href.includes("v=")) {
-        return "";
+    if (location.href.includes("v=")) {
+        return location.href.split("v=")[1];
+    } else if (location.href.includes(".be/")) {
+        return location.href.split(".be/")[1];
     }
-    return location.href.split("v=")[1];
+    return "";
 }
 
 export function clamp(val, min, max) {
