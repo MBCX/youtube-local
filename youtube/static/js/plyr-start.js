@@ -66,26 +66,7 @@ Object.defineProperty(Plyr.prototype, 'quality', {
     }
 });
 
-function skipSilence(videoObj)
-{
-    const detector = new SilentSegmentsDetector(videoObj, 0.020);
-    detector.onSilence = (segment) => {
-        console.log(`Silent segment detected from ${segment[0]} to ${segment[1]}`);
-        if (
-            numberBetween(
-                videoObj.currentTime,
-                segment[0],
-                segment[1] - 1,
-                true
-            )
-        )
-        {
-            videoObj.currentTime = segment[1];
-        }
-    }
-}
-
-const player = new Plyr(document.querySelector("video"), {
+const playerOptions = {
     disableContextMenu: false,
     captions: {
         active: captionsActive,
@@ -141,7 +122,15 @@ const player = new Plyr(document.querySelector("video"), {
         src: [storyboard_url],
     },
     settings: ['captions', 'quality', 'speed', 'loop'],
-});
+}
+
+// if the value set by user is -1, the volume option is omitted, as it only accepts value b/w 0 and 1
+// https://github.com/sampotts/plyr#options
+if (data.settings.default_volume !== -1) {
+  playerOptions.volume = data.settings.default_volume / 100;
+}
+
+const player = new Plyr(document.querySelector('video'), playerOptions);
 
 // disable double click to fullscreen
 // https://github.com/sampotts/plyr/issues/1370#issuecomment-528966795
@@ -154,9 +143,4 @@ player.eventListeners.forEach(function(eventListener) {
 // Add .started property, true after the playback has been started
 // Needed so controls won't be hidden before playback has started
 player.started = false;
-player.once('playing', function() {
-    this.started = true;
-    // skipSilence(player.media)
-});
-
-export { player };
+player.once('playing', function(){this.started = true});
