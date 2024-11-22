@@ -586,35 +586,36 @@
 
     <span class="direct-link"><a href="https://youtu.be/{{ video_id }}">Direct Link</a></span>
 
-    <details class="download-dropdown">
-        <summary class="download-dropdown-label">Download</summary>
-        <ul class="download-dropdown-content">
-            {% for format in download_formats %}
-            <li class="download-format">
-                <a class="download-link" href="{{ format['url'] }}">
-                    <ol class="format-attributes">
-                        <li class="format-ext">{{ format['ext'] }}</li>
-                        <li class="format-video-quality">{{ format['video_quality'] }}</li>
-                        <li class="format-audio-quality">{{ format['audio_quality'] }}</li>
-                        <li class="format-file-size">{{ format['file_size'] }}</li>
-                        <li class="format-codecs">{{ format['codecs'] }}</li>
-                    </ol>
-                </a>
-            </li>
-            {% endfor %}
-            {% for download in other_downloads %}
-            <li class="download-format">
-                <a class="download-link" href="{{ download['url'] }}">
-                    <ol class="format-attributes">
-                        <li class="format-ext">{{ download['ext'] }}</li>
-                        <li class="format-label">{{ download['label'] }}</li>
-                    </ol>
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
-    </details>
-
+        {% if settings.use_video_download != 0 %}
+        <details class="download-dropdown">
+            <summary class="download-dropdown-label">Download</summary>
+            <ul class="download-dropdown-content">
+                {% for format in download_formats %}
+                    <li class="download-format">
+                        <a class="download-link" href="{{ format['url'] }}">
+                            <ol class="format-attributes">
+                                <li class="format-ext">{{ format['ext'] }}</li>
+                                <li class="format-video-quality">{{ format['video_quality'] }}</li>
+                                <li class="format-audio-quality">{{ format['audio_quality'] }}</li>
+                                <li class="format-file-size">{{ format['file_size'] }}</li>
+                                <li class="format-codecs">{{ format['codecs'] }}</li>
+                            </ol>
+                        </a>
+                    </li>
+                {% endfor %}
+                {% for download in other_downloads %}
+                    <li class="download-format">
+                        <a class="download-link" href="{{ download['url'] }}">
+                            <ol class="format-attributes">
+                                <li class="format-ext">{{ download['ext'] }}</li>
+                                <li class="format-label">{{ download['label'] }}</li>
+                            </ol>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </details>
+	{% endif %}
 
     <span class="description">{{ common_elements.text_runs(description)|escape|urlize|timestamps|safe }}</span>
     <div class="music-list">
