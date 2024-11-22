@@ -388,8 +388,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 }, { once: true });
 
 // save watched time to session storage
-addEventListener("beforeunload", function(e) {
-    sessionStorage.setItem(getVideoID(), video.currentTime);
+addEventListener("beforeunload", function() {
+    // There's no reason to store the length if
+    // there's 20 seconds left on the video, or
+    // has ended.
+    if (Math.floor(video.duration - video.currentTime) > 20)
+    {
+        sessionStorage.setItem(getVideoID(), video.currentTime);
+    }
+    else
+    {
+        if (sessionStorage.getItem(getVideoID()) != null)
+        {
+            sessionStorage.removeItem(getVideoID());
+        }
+    }
 });
 
 video.addEventListener("loadedmetadata", function () {
