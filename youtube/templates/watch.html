@@ -67,55 +67,57 @@
         }
 
     {% if settings.theater_mode %}
-        #video-container{
+        #video-container {
             grid-column: 1 / span 5;
             justify-self: center;
-            max-width: 100%;
-            max-height: calc(var(--screen-width)*var(--video_height)/var(--video_width));
-            height: calc(var(--video_height)*1px);
-            width: calc(var(--theater_video_target_width)*1px);
+            width: 100%;
+            max-width: 1280px;
+            aspect-ratio: var(--video_width) / var(--video_height);
+            position: relative;
             margin-bottom: 10px;
             --plyr-video-background: rgba(0, 0, 0, 0);
         }
+        
+        /* Fallback for browsers that don't support aspect-ratio */
+        #video-container::before {
+            content: "";
+            display: block;
+            padding-top: calc((var(--video_height) / var(--video_width)) * 100%);
+        }
+        
+        #video-container > video,
+        #video-container > .plyr {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* For older browsers that don't support object-fit */
+        @media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+            #video-container > video {
+                width: auto;
+                height: auto;
+                min-width: 100%;
+                min-height: 100%;
+            }
+        }
+        
+        video {
+            background-color: var(--video-background-color);
+        }
 
-        /*
-        Really just want this as another max-height variable in
-        #video-container, but have to use media queries instead because min
-        is only supported by newer browsers:
-            https://stackoverflow.com/questions/30568424/min-max-width-height-with-multiple-values
-
-        Because CSS is extra special, we cannot change
-        this max-height value using javascript when the video resolution
-        is changed, so we use this technique:
-        https://stackoverflow.com/a/39610272
-        */
-
-        {% set heights = [] %}
-
-        {% for src in uni_sources+pair_sources %}
-            {% if src['height'] not in heights %}
-                {% do heights.append(src['height']) %}
-                @media(max-height:{{ src['height'] + 50 }}px){
-                    #video-container.h{{ src['height'] }}{
-                        height: calc(100vh - 50px); /* 50px is height of header */
-                    }
-                }
-            {% endif %}
-        {% endfor %}
-
-                video{
-                    background-color: var(--video-background-color);
-                }
-                #video-container > video, #video-container > .plyr{
-                    width: 100%;
-                    height: 100%;
-                }
+        @media (max-width: 880px) {
+            #video-container {
+                width: 100vw;
+                margin-inline: calc(-1 * (100vw - 100%) / 2);
+            }
+        }
+        
         .side-videos{
             grid-row: 2 /span 3;
             max-width: 400px;
-        }
-        .video-info{
-            max-width: 640px;
         }
     {% else %}
         #video-container {
