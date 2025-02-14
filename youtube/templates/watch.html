@@ -616,24 +616,88 @@
     </details>
 
 
-    <span class="description">{{ common_elements.text_runs(description)|escape|urlize|timestamps|safe }}</span>
-    <div class="music-list">
-        {% if music_list.__len__() != 0 %}
-        <hr>
-        <table>
-            <caption>Music</caption>
-            <tr>
-                {% for attribute in music_attributes %}
-                <th>{{ attribute }}</th>
+        <time datetime="$upload_date">Published on {{ time_published }}</time>
+        <span class="likes-dislikes">{{ like_count }} likes {{ dislike_count }} dislikes</span>
+
+        <div class="external-player-controls">
+            <input id="speed-control" type="text" title="Video speed" placeholder="Speed">
+            {% if settings.video_player == 0 %}
+                <select id="quality-select" autocomplete="off">
+                    {% for src in uni_sources %}
+                        <option value='{"type": "uni", "index": {{ loop.index0 }}}' {{ 'selected' if loop.index0 == uni_idx and not using_pair_sources else '' }} >{{ src['quality_string'] }}</option>
+                    {% endfor %}
+                    {% for src_pair in pair_sources %}
+                        <option value='{"type": "pair", "index": {{ loop.index0}}}' {{ 'selected' if loop.index0 == pair_idx and using_pair_sources else '' }} >{{ src_pair['quality_string'] }}</option>
+                    {% endfor %}
+                </select>
+            {% endif %}
+        </div>
+        <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
+
+        <span class="direct-link"><a href="https://youtu.be/{{ video_id }}">Direct Link</a></span>
+
+        {% if settings.use_video_download != 0 %}
+        <details class="download-dropdown">
+            <summary class="download-dropdown-label">Download</summary>
+            <ul class="download-dropdown-content">
+                {% for format in download_formats %}
+                    <li class="download-format">
+                        <a class="download-link" href="{{ format['url'] }}">
+                            <ol class="format-attributes">
+                                <li class="format-ext">{{ format['ext'] }}</li>
+                                <li class="format-video-quality">{{ format['video_quality'] }}</li>
+                                <li class="format-audio-quality">{{ format['audio_quality'] }}</li>
+                                <li class="format-file-size">{{ format['file_size'] }}</li>
+                                <li class="format-codecs">{{ format['codecs'] }}</li>
+                            </ol>
+                        </a>
+                    </li>
                 {% endfor %}
-            </tr>
-            {% for track in music_list %}
-            <tr>
-                {% for attribute in music_attributes %}
-                {% if attribute.lower() == 'title' and track['url'] is not none %}
-                <td><a href="{{ track['url'] }}">{{ track.get(attribute.lower(), '') }}</a></td>
-                {% else %}
-                <td>{{ track.get(attribute.lower(), '') }}</td>
+                {% for download in other_downloads %}
+                    <li class="download-format">
+                        <a class="download-link" href="{{ download['url'] }}">
+                            <ol class="format-attributes">
+                                <li class="format-ext">{{ download['ext'] }}</li>
+                                <li class="format-label">{{ download['label'] }}</li>
+                            </ol>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </details>
+	{% endif %}
+
+        <span class="description">{{ common_elements.text_runs(description)|escape|urlize|timestamps|safe }}</span>
+        <div class="music-list">
+            {% if music_list.__len__() != 0 %}
+                <hr>
+                <table>
+                    <caption>Music</caption>
+                    <tr>
+                        {% for attribute in music_attributes %}
+                            <th>{{ attribute }}</th>
+                        {% endfor %}
+                    </tr>
+                    {% for track in music_list %}
+                        <tr>
+                            {% for attribute in music_attributes %}
+                                {% if attribute.lower() == 'title' and track['url'] is not none %}
+                                    <td><a href="{{ track['url'] }}">{{ track.get(attribute.lower(), '') }}</a></td>
+                                {% else %}
+                                    <td>{{ track.get(attribute.lower(), '') }}</td>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% endif %}
+        </div>
+        <details class="more-info">
+            <summary>More info</summary>
+            <div class="more-info-content">
+                <p>Tor exit node: {{ ip_address }}</p>
+                {% if invidious_used %}
+                    <p>Used Invidious as fallback.</p>
                 {% endif %}
                 {% endfor %}
             </tr>
