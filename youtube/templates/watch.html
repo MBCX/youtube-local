@@ -498,122 +498,68 @@
 
 {% block head %}
     {% if settings.video_player == 1 %}
-<!-- plyr -->
-<link href="/youtube.com/static/modules/plyr/plyr.css" rel="stylesheet" />
-<link href="/youtube.com/static/plyr_fixes.css" rel="stylesheet" />
-<!--/ plyr -->
+        <!-- plyr -->
+        <link href="/youtube.com/static/modules/plyr/plyr.css" rel="stylesheet"/>
+        <link href="/youtube.com/static/plyr_fixes.css" rel="stylesheet"/>
+        <!--/ plyr -->
     {% endif %}
 {% endblock head %}
 
 {% block main %}
     {% if playability_error %}
-<div class="playability-error">
-    <span>
-        {{ 'Error: ' + playability_error }}
-        {% if invidious_reload_button %}
-        <a href="{{ video_url }}&use_invidious=0">
-            <br>
-            Reload without invidious (for usage of new identity button).
-        </a>
-        {% endif %}
-    </span>
-</div>
+        <div class="playability-error">
+            <span>{{ 'Error: ' + playability_error }}
+            {% if invidious_reload_button %}
+                <a href="{{ video_url }}&use_invidious=0"><br>
+Reload without invidious (for usage of new identity button).</a>
+            {% endif %}
+            </span>
+        </div>
     {% elif (uni_sources.__len__() == 0 or live) and hls_formats.__len__() != 0 %}
-<div class="live-url-choices">
-    <span>Copy a url into your video player:</span>
-    <ol>
-        {% for fmt in hls_formats %}
-        <li class="url-choice"><div class="url-choice-label">{{ fmt['video_quality'] }}: </div><input class="url-choice-copy" value="{{ fmt['url'] }}" readonly onclick="this.select();"></li>
-        {% endfor %}
-    </ol>
-</div>
+        <div class="live-url-choices">
+            <span>Copy a url into your video player:</span>
+            <ol>
+                {% for fmt in hls_formats %}
+                    <li class="url-choice"><div class="url-choice-label">{{ fmt['video_quality'] }}: </div><input class="url-choice-copy" value="{{ fmt['url'] }}" readonly onclick="this.select();"></li>
+                {% endfor %}
+            </ol>
+        </div>
     {% else %}
-<div id="video-container" class="h{{video_height}}">
-    <!--Do not add other classes here, classes changed by javascript-->
-    <video controls autofocus class="video" {{ 'autoplay' if settings.autoplay_videos }}>
-        {% if uni_sources %}
-        <source src="{{ uni_sources[uni_idx]['url'] }}" type="{{ uni_sources[uni_idx]['type'] }}" data-res="{{ uni_sources[uni_idx]['quality'] }}">
-        {% endif %}
+        <div id="video-container" class="h{{video_height}}"> <!--Do not add other classes here, classes changed by javascript-->
+            <video controls autofocus class="video" {{ 'autoplay' if settings.autoplay_videos }}>
+                {% if uni_sources %}
+                    <source src="{{ uni_sources[uni_idx]['url'] }}" type="{{ uni_sources[uni_idx]['type'] }}" data-res="{{ uni_sources[uni_idx]['quality'] }}">
+                {% endif %}
 
-        {% for source in subtitle_sources %}
-        {% if source['on'] %}
-        <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}" default>
-        {% else %}
-        <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}">
-        {% endif %}
-        {% endfor %}
-    </video>
-</div>
+                {% for source in subtitle_sources %}
+                    {% if source['on'] %}
+                        <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}" default>
+                    {% else %}
+                        <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}">
+                    {% endif %}
+                {% endfor %}
+            </video>
+        </div>
     {% endif %}
 
-<div class="video-info">
-    <h2 class="title">{{ title }}</h2>
-    <ul class="labels">
-        {%- if unlisted -%}
-        <li class="is-unlisted">Unlisted</li>
-        {%- endif -%}
-        {%- if age_restricted -%}
-        <li class="age-restricted">Age-restricted</li>
-        {%- endif -%}
-        {%- if limited_state -%}
-        <li>Limited state</li>
-        {%- endif -%}
-        {%- if live -%}
-        <li>Live</li>
-        {%- endif -%}
-    </ul>
-    <address>Uploaded by <a href="{{ uploader_channel_url }}">{{ uploader }}</a></address>
-    <span class="views">{{ view_count }} views</span>
-
-
-    <time datetime="$upload_date">Published on {{ time_published }}</time>
-    <span class="likes-dislikes">{{ like_count }} likes {{ dislike_count }} dislikes</span>
-
-    <div class="external-player-controls">
-        <input id="speed-control" type="text" title="Video speed" placeholder="Speed">
-        {% if settings.video_player == 0 %}
-        <select id="quality-select" autocomplete="off">
-            {% for src in uni_sources %}
-            <option value='{"type": "uni", "index": {{ loop.index0 }}}' {{ 'selected' if loop.index0 == uni_idx and not using_pair_sources else '' }}>{{ src['quality_string'] }}</option>
-            {% endfor %}
-            {% for src_pair in pair_sources %}
-            <option value='{"type": "pair", "index": {{ loop.index0}}}' {{ 'selected' if loop.index0 == pair_idx and using_pair_sources else '' }}>{{ src_pair['quality_string'] }}</option>
-            {% endfor %}
-        </select>
-        {% endif %}
-    </div>
-    <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
-
-    <span class="direct-link"><a href="https://youtu.be/{{ video_id }}">Direct Link</a></span>
-
-    <details class="download-dropdown">
-        <summary class="download-dropdown-label">Download</summary>
-        <ul class="download-dropdown-content">
-            {% for format in download_formats %}
-            <li class="download-format">
-                <a class="download-link" href="{{ format['url'] }}">
-                    <ol class="format-attributes">
-                        <li class="format-ext">{{ format['ext'] }}</li>
-                        <li class="format-video-quality">{{ format['video_quality'] }}</li>
-                        <li class="format-audio-quality">{{ format['audio_quality'] }}</li>
-                        <li class="format-file-size">{{ format['file_size'] }}</li>
-                        <li class="format-codecs">{{ format['codecs'] }}</li>
-                    </ol>
-                </a>
-            </li>
-            {% endfor %}
-            {% for download in other_downloads %}
-            <li class="download-format">
-                <a class="download-link" href="{{ download['url'] }}">
-                    <ol class="format-attributes">
-                        <li class="format-ext">{{ download['ext'] }}</li>
-                        <li class="format-label">{{ download['label'] }}</li>
-                    </ol>
-                </a>
-            </li>
-            {% endfor %}
+    <div class="video-info">
+        <h2 class="title">{{ title }}</h2>
+        <ul class="labels">
+            {%- if unlisted -%}
+                <li class="is-unlisted">Unlisted</li>
+            {%- endif -%}
+            {%- if age_restricted -%}
+                <li class="age-restricted">Age-restricted</li>
+            {%- endif -%}
+            {%- if limited_state -%}
+                <li>Limited state</li>
+            {%- endif -%}
+            {%- if live -%}
+                <li>Live</li>
+            {%- endif -%}
         </ul>
-    </details>
+        <address>Uploaded by <a href="{{ uploader_channel_url }}">{{ uploader }}</a></address>
+        <span class="views">{{ view_count }} views</span>
 
 
         <time datetime="$upload_date">Published on {{ time_published }}</time>
@@ -699,121 +645,105 @@
                 {% if invidious_used %}
                     <p>Used Invidious as fallback.</p>
                 {% endif %}
-                {% endfor %}
-            </tr>
-            {% endfor %}
-        </table>
+                <p class="allowed-countries">Allowed countries: {{ allowed_countries|join(', ') }}</p>
+
+                {% if settings.use_sponsorblock_js %}
+                <ul class="more-actions">
+                <li><label><input type=checkbox id=skip_sponsors checked>skip sponsors</label> <span id=skip_n></span>
+                </ul>
+                {% endif %}
+            </div>
+        </details>
+    </div>
+
+    <div class="side-videos">
+        {% if playlist %}
+            <div class="playlist">
+                <div class="playlist-header">
+                    <a href="{{ playlist['url'] }}" title="{{ playlist['title'] }}"><h3>{{ playlist['title'] }}</h3></a>
+                    <ul class="playlist-metadata">
+                        <li>Autoplay: <input type="checkbox" id="autoplay-toggle"></li>
+                        {% if playlist['current_index'] is none %}
+                            <li>[Error!]/{{ playlist['video_count'] }}</li>
+                        {% else %}
+                            <li>{{ playlist['current_index']+1 }}/{{ playlist['video_count'] }}</li>
+                        {% endif %}
+                        <li><a href="{{ playlist['author_url'] }}" title="{{ playlist['author'] }}">{{ playlist['author'] }}</a></li>
+                    </ul>
+                </div>
+                <nav class="playlist-videos">
+                    {% for info in playlist['items'] %}
+                        {# non-lazy load for 5 videos surrounding current video #}
+                        {# for non-js browsers or old such that IntersectionObserver doesn't work #}
+                        {# -10 is sentinel to not load anything if there's no current_index for some reason #}
+                        {% if (playlist.get('current_index', -10) - loop.index0)|abs is lt(5)  %}
+                            {{ common_elements.item(info, include_badges=false, lazy_load=false) }}
+                        {% else %}
+                            {{ common_elements.item(info, include_badges=false, lazy_load=true) }}
+                        {% endif %}
+                    {% endfor %}
+                </nav>
+            </div>
+        {% elif settings.related_videos_mode != 0 %}
+            <div class="autoplay-toggle-container"><label for="autoplay-toggle">Autoplay: </label><input type="checkbox" id="autoplay-toggle"></div>
+        {% endif %}
+
+
+        {% if subtitle_sources %}
+            <details id="transcript-details">
+                <summary>Transcript</summary>
+                <div id="transcript-div">
+                    <select id="select-tt">
+                        {% for source in subtitle_sources %}
+                            <option>{{ source['label'] }}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="transcript-use-table">Table view</label>
+                    <input type="checkbox" id="transcript-use-table">
+                    <table id="transcript-table"></table>
+                </div>
+            </details>
+        {% endif %}
+
+        {% if settings.related_videos_mode != 0 %}
+            <details class="related-videos-outer" {{'open' if settings.related_videos_mode == 1 else ''}}>
+                <summary>Related Videos</summary>
+                <nav class="related-videos-inner">
+                    {% for info in related %}
+                        {{ common_elements.item(info, include_badges=false) }}
+                    {% endfor %}
+                </nav>
+            </details>
         {% endif %}
     </div>
-    <details class="more-info">
-        <summary>More info</summary>
-        <div class="more-info-content">
-            <p>Tor exit node: {{ ip_address }}</p>
-            {% if invidious_used %}
-            <p>Used Invidious as fallback.</p>
-            {% endif %}
-            <p class="allowed-countries">Allowed countries: {{ allowed_countries|join(', ') }}</p>
-
-            {% if settings.use_sponsorblock_js %}
-            <ul class="more-actions">
-                <li><label><input type=checkbox id=skip_sponsors checked>skip sponsors</label> <span id=skip_n></span>
-            </ul>
-            {% endif %}
-        </div>
-    </details>
-</div>
-
-<div class="side-videos">
-    {% if playlist %}
-    <div class="playlist">
-        <div class="playlist-header">
-            <a href="{{ playlist['url'] }}" title="{{ playlist['title'] }}"><h3>{{ playlist['title'] }}</h3></a>
-            <ul class="playlist-metadata">
-                <li>Autoplay: <input type="checkbox" id="autoplay-toggle"></li>
-                {% if playlist['current_index'] is none %}
-                <li>[Error!]/{{ playlist['video_count'] }}</li>
-                {% else %}
-                <li>{{ playlist['current_index']+1 }}/{{ playlist['video_count'] }}</li>
-                {% endif %}
-                <li><a href="{{ playlist['author_url'] }}" title="{{ playlist['author'] }}">{{ playlist['author'] }}</a></li>
-            </ul>
-        </div>
-        <nav class="playlist-videos">
-            {% for info in playlist['items'] %}
-            {# non-lazy load for 5 videos surrounding current video #}
-            {# for non-js browsers or old such that IntersectionObserver doesn't work #}
-            {# -10 is sentinel to not load anything if there's no current_index for some reason #}
-            {% if (playlist.get('current_index', -10) - loop.index0)|abs is lt(5)  %}
-            {{ common_elements.item(info, include_badges=false, lazy_load=false) }}
-            {% else %}
-            {{ common_elements.item(info, include_badges=false, lazy_load=true) }}
-            {% endif %}
-            {% endfor %}
-        </nav>
-    </div>
-    {% elif settings.related_videos_mode != 0 %}
-    <div class="autoplay-toggle-container"><label for="autoplay-toggle">Autoplay: </label><input type="checkbox" id="autoplay-toggle"></div>
-    {% endif %}
-
-
-    {% if subtitle_sources %}
-    <details id="transcript-details">
-        <summary>Transcript</summary>
-        <div id="transcript-div">
-            <select id="select-tt">
-                {% for source in subtitle_sources %}
-                <option>{{ source['label'] }}</option>
-                {% endfor %}
-            </select>
-            <label for="transcript-use-table">Table view</label>
-            <input type="checkbox" id="transcript-use-table">
-            <table id="transcript-table"></table>
-        </div>
-    </details>
-    {% endif %}
-
-    {% if settings.related_videos_mode != 0 %}
-    <details class="related-videos-outer" {{'open' if settings.related_videos_mode == 1 else ''}}>
-        <summary>Related Videos</summary>
-        <nav class="related-videos-inner">
-            {% for info in related %}
-            {{ common_elements.item(info, include_badges=false) }}
-            {% endfor %}
-        </nav>
-    </details>
-    {% endif %}
-</div>
 
     {% if settings.comments_mode != 0 %}
         {% if comments_disabled %}
-<div class="comments-area-outer comments-disabled">Comments disabled</div>
+            <div class="comments-area-outer comments-disabled">Comments disabled</div>
         {% else %}
-<details class="comments-area-outer" {{'open' if settings.comments_mode == 1 else ''}}>
-    <summary>{{ comment_count|commatize }} comment{{'s' if comment_count != '1' else ''}}</summary>
-    <section class="comments-area-inner comments-area">
-        {% if comments_info %}
-        {{ comments.video_comments(comments_info) }}
-        {% endif %}
-    </section>
-</details>
+            <details class="comments-area-outer" {{'open' if settings.comments_mode == 1 else ''}}>
+                <summary>{{ comment_count|commatize }} comment{{'s' if comment_count != '1' else ''}}</summary>
+                <section class="comments-area-inner comments-area">
+                    {% if comments_info %}
+                        {{ comments.video_comments(comments_info) }}
+                    {% endif %}
+                </section>
+            </details>
         {% endif %}
     {% endif %}
 
-<script src="/youtube.com/static/js/av-merge.js"></script>
-<script type="module" src="/youtube.com/static/js/watch.js"></script>
+    <script src="/youtube.com/static/js/av-merge.js"></script>
+    <script type="module" src="/youtube.com/static/js/watch.js"></script>
     {% if settings.video_player == 1 %}
-<!-- plyr -->
-<script>var storyboard_url = {{ storyboard_url | tojson }}</script>
-<script type="module" src="/youtube.com/static/modules/plyr/plyr.js"></script>
-<script type="module" src="/youtube.com/static/js/plyr-start.js"></script>
-<!-- /plyr -->
+        <!-- plyr -->
+        <script>var storyboard_url = {{ storyboard_url | tojson }}</script>
+        <script type="module" src="/youtube.com/static/modules/plyr/plyr.js"></script>
+        <script type="module" src="/youtube.com/static/js/plyr-start.js"></script>
+        <!-- /plyr -->
     {% endif %}
-<script type="module" src="/youtube.com/static/js/common.js"></script>
-<script type="module" src="/youtube.com/static/js/transcript-table.js"></script>
-    {% if settings.use_video_hotkeys %}
-<script type="module" src="/youtube.com/static/js/hotkeys.js"></script> {% endif %}
-    {% if settings.use_comments_js %}
-<script type="module" src="/youtube.com/static/js/comments.js"></script> {% endif %}
-    {% if settings.use_sponsorblock_js %}
-<script type="module" src="/youtube.com/static/js/sponsorblock.js"></script> {% endif %}
+    <script type="module" src="/youtube.com/static/js/common.js"></script>
+    <script type="module" src="/youtube.com/static/js/transcript-table.js"></script>
+    {% if settings.use_video_hotkeys %} <script type="module" src="/youtube.com/static/js/hotkeys.js"></script> {% endif %}
+    {% if settings.use_comments_js %} <script type="module" src="/youtube.com/static/js/comments.js"></script> {% endif %}
+    {% if settings.use_sponsorblock_js %} <script type="module" src="/youtube.com/static/js/sponsorblock.js"></script> {% endif %}
 {% endblock main %}

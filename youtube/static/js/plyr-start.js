@@ -144,3 +144,5 @@ player.eventListeners.forEach(function(eventListener) {
 // Needed so controls won't be hidden before playback has started
 player.started = false;
 player.once('playing', function(){this.started = true});
+
+export { player };
