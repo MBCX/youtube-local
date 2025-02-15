@@ -823,7 +823,7 @@ client_xhr_headers = (
     ('X-YouTube-Api-Format-Version', '1'),
     ('X-YouTube-Client-Name', INNERTUBE_CLIENTS[client]['INNERTUBE_CONTEXT_CLIENT_NAME']),
     ('X-YouTube-Client-Version', INNERTUBE_CLIENTS[client]['INNERTUBE_CONTEXT']['client']['clientVersion']),
-    )
+)
 
 def get_ytcfg(client):
     if not settings.use_ytcfg:
@@ -944,11 +944,49 @@ def call_youtube_api(client, api, data):
     key = client_params.get('INNERTUBE_API_KEY') or None
     host = client_params.get('INNERTUBE_HOST') or 'www.youtube.com'
     user_agent = context['client'].get('userAgent') or mobile_user_agent
+    visitor_data_file = os.path.join(settings.data_dir, 'visitorData.txt')
+    ytcfg = get_ytcfg(client)
+    visitor_data_header = None
     visitor_data = get_visitor_data()
+    po_token_data = None
+    
+    if settings.use_po_token:
+        po_token_cache = os.path.join(settings.data_dir,'po_token_cache.txt')
+        if os.path.exists(po_token_cache):
+            try:
+                with open(po_token_cache, 'r') as file:
+                    po_token_dict = json.loads(file.read())
+                    file.close()
+            except OSError:
+                print('An OS error occured which prevents access to po_token_cache file')
+            visitor_data_header = ('X-Goog-Visitor-Id', visitor_data)
+            po_token_data = {
+                    'poToken': po_token_dict['poToken'],
+                    }
+    if ytcfg:
+        ytcfg_context = ytcfg.get('INNERTUBE_CONTEXT')
+        print('Got client context from ytcfg')
+        key = ytcfg.get('INNERTUBE_API_KEY')
+        if ytcfg_context:
+            # Needed to set correct client version obtained from ytcfg
+            context = ytcfg_context
+        if settings.use_po_token:
+            # Needed to use correct visitorData from po_token_cache.txt
+            if visitor_data:
+                context['client']['visitorData'] = visitor_data
+    
+    headers = (('Content-Type', 'application/json'),
+               ('User-Agent', user_agent),
+               ('X-Goog-Api-Format-Version', '1'),
+               ('X-YouTube-Client-Name',
+                client_params['INNERTUBE_CONTEXT_CLIENT_NAME']),
+               ('X-YouTube-Client-Version',
+                context['client'].get('clientVersion')))
 
     url = 'https://' + host + '/youtubei/v1/' + api + '?key=' + key
     if visitor_data:
         context['client'].update({'visitorData': visitor_data})
+    
     data['context'] = context
     require_js_player = client_params.get('REQUIRE_JS_PLAYER')
     if require_js_player:
@@ -1015,6 +1053,7 @@ def call_youtube_api(client, api, data):
     headers = (('Content-Type', 'application/json'),('User-Agent', user_agent))
     if visitor_data:
         headers = ( *headers, ('X-Goog-Visitor-Id', visitor_data ))
+    
     response = fetch_url(
         url, data=data, headers=headers,
         debug_name='youtubei_' + api + '_' + client,

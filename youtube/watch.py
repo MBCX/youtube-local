@@ -434,7 +434,7 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     tasks = (
         # Get video metadata from here
         gevent.spawn(fetch_watch_page_info, video_id, playlist_id, index),
-        gevent.spawn(fetch_player_response, client, video_id)
+        gevent.spawn(fetch_player_response, 'android_vr', video_id)
     )
     gevent.joinall(tasks)
     util.check_gevent_exceptions(*tasks)
