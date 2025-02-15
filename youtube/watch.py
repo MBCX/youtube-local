@@ -434,8 +434,6 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     tasks = (
         # Get video metadata from here
         gevent.spawn(fetch_watch_page_info, video_id, playlist_id, index),
-
-
         gevent.spawn(fetch_player_response, client, video_id)
     )
     gevent.joinall(tasks)
@@ -722,12 +720,6 @@ def get_watch_page(video_id=None):
         fmt['url'] = fmt['url'].replace(
             '/videoplayback',
             '/videoplayback/name/' + filename)
-
-    if settings.gather_googlevideo_domains:
-        with open(os.path.join(settings.data_dir, 'googlevideo-domains.txt'), 'a+', encoding='utf-8') as f:
-            url = info['formats'][0]['url']
-            subdomain = url[0:url.find(".googlevideo.com")]
-            f.write(subdomain + "\n")
 
 
     download_formats = []

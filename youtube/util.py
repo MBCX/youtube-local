@@ -795,6 +795,23 @@ INNERTUBE_CLIENTS = {
         'INNERTUBE_CONTEXT_CLIENT_NAME': 7,
         'REQUIRE_JS_PLAYER': True,
     },
+    'android_vr': {
+        'INNERTUBE_API_KEY': 'AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w',
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'clientName': 'ANDROID_VR',
+                'clientVersion': '1.60.19',
+                'deviceMake': 'Oculus',
+                'deviceModel': 'Quest 3',
+                'androidSdkVersion': 32,
+                'userAgent': 'com.google.android.apps.youtube.vr.oculus/1.60.19 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip',
+                'osName': 'Android',
+                'osVersion': '12L',
+            },
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 28,
+        'REQUIRE_JS_PLAYER': False,
+    },
 }
 
 innertube_client = list(INNERTUBE_CLIENTS.keys())
@@ -889,6 +906,37 @@ def extract_signature_timestamp(base_js):
     else:
         signature_timestamp = None
     return signature_timestamp
+def get_visitor_data():
+    visitor_data = None
+    visitor_data_cache = os.path.join(settings.data_dir, 'visitorData.txt')
+    if not os.path.exists(settings.data_dir):
+        os.makedirs(settings.data_dir)
+    if os.path.isfile(visitor_data_cache):
+        with open(visitor_data_cache, 'r') as file:
+            print('Getting visitor_data from cache')
+            visitor_data = file.read()
+        max_age = 12*3600
+        file_age = time.time() - os.path.getmtime(visitor_data_cache)
+        if file_age > max_age:
+            print('visitor_data cache is too old. Removing file...')
+            os.remove(visitor_data_cache)
+        return visitor_data
+
+    print('Fetching youtube homepage to get visitor_data')
+    yt_homepage = 'https://www.youtube.com'
+    yt_resp = fetch_url(yt_homepage, headers={'User-Agent': mobile_user_agent}, report_text='Getting youtube homepage')
+    visitor_data_re = r'''"visitorData":\s*?"(.+?)"'''
+    visitor_data_match = re.search(visitor_data_re, yt_resp.decode())
+    if visitor_data_match:
+        visitor_data = visitor_data_match.group(1)
+        print(f'Got visitor_data: {len(visitor_data)}')
+        with open(visitor_data_cache, 'w') as file:
+            print('Saving visitor_data cache...')
+            file.write(visitor_data)
+        return visitor_data
+    else:
+        print('Unable to get visitor_data value')
+    return visitor_data
 
 def call_youtube_api(client, api, data):
     client_params = INNERTUBE_CLIENTS[client]
@@ -896,66 +944,11 @@ def call_youtube_api(client, api, data):
     key = client_params.get('INNERTUBE_API_KEY') or None
     host = client_params.get('INNERTUBE_HOST') or 'www.youtube.com'
     user_agent = context['client'].get('userAgent') or mobile_user_agent
-    visitor_data_file = os.path.join(settings.data_dir, 'visitorData.txt')
-    ytcfg = get_ytcfg(client)
-    visitor_data_header = None
-    if not settings.use_po_token:
-        if os.path.exists(visitor_data_file):
-            file_age = time.time() - os.path.getmtime(visitor_data_file)
-            if file_age < 86400:
-                print('visitor data file is less than 24h old. Using its content')
-                try:
-                    with open(visitor_data_file, 'r') as file:
-                        visitor_data = file.read()
-                        print('Visitor data : ' + visitor_data)
-                        visitor_data_header = (
-                                'X-Goog-Visitor-Id', visitor_data
-                                )
-                except OSError:
-                    print('An OS Error occured while reading visitor data file. No visitor data sent. Continuing anyway')
-            else:
-                print('visitor data file is more than 24h old. Removing the file.')
-                os.remove(visitor_data_file)
-        else:
-            visitor_data = None
-            if not ytcfg:
-                print('''Not using visitor_data in the api request. Reload the page if you are asked to sign in.''')
-    po_token_data = None
-    if settings.use_po_token:
-        po_token_cache = os.path.join(settings.data_dir,'po_token_cache.txt')
-        if os.path.exists(po_token_cache):
-            try:
-                with open(po_token_cache, 'r') as file:
-                    po_token_dict = json.loads(file.read())
-                    file.close()
-            except OSError:
-                print('An OS error occured which prevents access to po_token_cache file')
-            visitor_data = po_token_dict.get('visitorData')
-            visitor_data_header = ('X-Goog-Visitor-Id', visitor_data)
-            po_token_data = {
-                    'poToken': po_token_dict['poToken'],
-                    }
-    if ytcfg:
-        ytcfg_context = ytcfg.get('INNERTUBE_CONTEXT')
-        print('Got client context from ytcfg')
-        key = ytcfg.get('INNERTUBE_API_KEY')
-        if ytcfg_context:
-            # Needed to set correct client version obtained from ytcfg
-            context = ytcfg_context
-        if settings.use_po_token:
-            # Needed to use correct visitorData from po_token_cache.txt
-            context['client']['visitorData'] = visitor_data
-    headers = (('Content-Type', 'application/json'),
-               ('User-Agent', user_agent),
-               ('X-Goog-Api-Format-Version', '1'),
-               ('X-YouTube-Client-Name',
-                client_params['INNERTUBE_CONTEXT_CLIENT_NAME']),
-               ('X-YouTube-Client-Version',
-                context['client'].get('clientVersion')))
-    # Only send visitor_data_header if not using ytcfg
-    if not ytcfg:
-        if visitor_data_header:
-            headers = ( *headers, visitor_data_header )
+    visitor_data = get_visitor_data()
+
+    url = 'https://' + host + '/youtubei/v1/' + api + '?key=' + key
+    if visitor_data:
+        context['client'].update({'visitorData': visitor_data})
     data['context'] = context
     require_js_player = client_params.get('REQUIRE_JS_PLAYER')
     if require_js_player:
@@ -1019,6 +1012,9 @@ def call_youtube_api(client, api, data):
         url = url + '?key=' + key
 
     data = json.dumps(data)
+    headers = (('Content-Type', 'application/json'),('User-Agent', user_agent))
+    if visitor_data:
+        headers = ( *headers, ('X-Goog-Visitor-Id', visitor_data ))
     response = fetch_url(
         url, data=data, headers=headers,
         debug_name='youtubei_' + api + '_' + client,
