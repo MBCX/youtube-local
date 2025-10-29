@@ -508,9 +508,6 @@ else:
         current_settings_dict = {}
         attributes = {
             ast.Constant: 'value',
-            ast.NameConstant: 'value',
-            ast.Num: 'n',
-            ast.Str: 's',
         }
         module_node = ast.parse(settings_text)
         for node in module_node.body:
